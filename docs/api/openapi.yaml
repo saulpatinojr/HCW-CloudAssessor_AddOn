@@ -49,7 +49,7 @@ paths:
       description: |
         Order of checks: rate limit (429), media type (415), human verification (503 when not configured and not
         explicitly allowed; 403 when the token is missing or refused), body size (413, reading stops at the limit),
-        JSON/shape (400), rows (422), concurrency (503 busy after 2 s). Header `x-turnstile-token` carries the
+        JSON/shape (400), rows (422), concurrency (503 overloaded after 2 s). Header `x-turnstile-token` carries the
         verification token; siteverify must echo `action = cloud-assessment-upload`.
       parameters:
         - { name: x-turnstile-token, in: header, required: false, schema: { type: string, maxLength: 2048 } }
@@ -74,7 +74,7 @@ paths:
         "415": { description: unsupported_media_type }
         "422": { description: "ingestion_failed (details.reason, details.warnings: row numbers and column names only) | too_many_rows (details.rows, details.maxRows)" }
         "429": { description: "rate_limited (Retry-After)" }
-        "503": { description: "busy (Retry-After) | turnstile_not_configured" }
+        "503": { description: "overloaded (Retry-After) | turnstile_not_configured" }
   /api/assessments/{id}:
     parameters:
       - { $ref: "#/components/parameters/Id" }

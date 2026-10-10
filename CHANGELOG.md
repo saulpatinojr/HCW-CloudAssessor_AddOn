@@ -4,6 +4,10 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased] — 0.1.0
 
+### Changed
+- Cross-AddOn standardization (program Phase 5D): the concurrency-cap answer is `503 overloaded` (was `busy`), the code
+  the Azure Migrate AddOn already uses; log event renamed to match.
+
 ### Added
 - Engine seed `packages/cloud-assessor-core` 0.1.0 (pydantic only): `Resource` model (`MODEL_VERSION = 1`), JSON-path-lite,
   `arg-json` / `arg-csv` ingestion (array or `az graph query` envelope with the paged warning; Resource Graph Explorer

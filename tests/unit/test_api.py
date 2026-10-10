@@ -259,7 +259,7 @@ def test_rate_limit_429_with_retry_after(sample_rows):
         )
 
 
-def test_503_busy_when_concurrency_bound_is_held(sample_rows):
+def test_503_overloaded_when_concurrency_bound_is_held(sample_rows):
     app = create_app(make_settings(max_concurrent=1), sweep=False)
     app.state.bound.wait_seconds = 0.05
     with TestClient(app) as c:
@@ -267,7 +267,7 @@ def test_503_busy_when_concurrency_bound_is_held(sample_rows):
 
         asyncio.run(app.state.bound.acquire())
         r = c.post("/api/assessments", json=sample_rows[:1])
-        assert r.status_code == 503 and r.json()["error"]["code"] == "busy" and r.headers["retry-after"] == "2"
+        assert r.status_code == 503 and r.json()["error"]["code"] == "overloaded" and r.headers["retry-after"] == "2"
         app.state.bound.release()
         assert c.post("/api/assessments", json=sample_rows[:1]).status_code == 201
 

@@ -25,7 +25,7 @@ ALLOWED_WORDS: frozenset[str] = frozenset(
         "turnstile_rejected",
         "turnstile_disabled",
         "rate_limited",
-        "busy",
+        "overloaded",
         "sweep",
         "request_error",
         "unhandled_error",

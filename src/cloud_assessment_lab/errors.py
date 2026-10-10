@@ -38,7 +38,7 @@ DEFAULT_CODES = {
     422: "invalid_request",
     429: "rate_limited",
     500: "internal_error",
-    503: "busy",
+    503: "overloaded",
 }
 DEFAULT_MESSAGES = {
     400: "The request could not be understood.",

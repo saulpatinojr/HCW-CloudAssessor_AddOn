@@ -58,7 +58,7 @@ class TokenBucketLimiter:
 
 
 class ConcurrencyBound:
-    """asyncio.Semaphore(max_concurrent); a request that cannot acquire within `wait_seconds` is answered busy."""
+    """asyncio.Semaphore(max_concurrent); a request that cannot acquire within `wait_seconds` is answered overloaded."""
 
     def __init__(self, max_concurrent: int, wait_seconds: float = 2.0) -> None:
         self._semaphore = asyncio.Semaphore(max_concurrent)

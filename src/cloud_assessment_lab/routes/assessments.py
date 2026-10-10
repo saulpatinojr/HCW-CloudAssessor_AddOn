@@ -134,8 +134,8 @@ async def create_assessment(request: Request) -> Response:
         ) from None
 
     if not await state.bound.acquire():
-        log_event("busy")
-        raise ApiError(503, "busy", "The service is busy; try again shortly.", headers={"Retry-After": "2"})
+        log_event("overloaded")
+        raise ApiError(503, "overloaded", "The service is busy; try again shortly.", headers={"Retry-After": "2"})
     try:
         assessment = assess(
             resources,
