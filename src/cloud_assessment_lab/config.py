@@ -11,16 +11,21 @@ ROOT = Path(__file__).resolve().parents[2]
 TURNSTILE_ACTION = "cloud-assessment-upload"
 
 
+# Upper bound for every numeric setting: large enough for any real deployment, small enough that every derived value
+# (minutes * 60, seconds into asyncio/datetime arithmetic) stays representable; Python ints do not overflow, but the
+# clocks and sleeps they feed do.
+MAX_SETTING = 1_000_000_000
+
+
 def _int(env: Mapping[str, str], key: str, default: int, *, minimum: int = 0) -> int:
     raw = env.get(key, "").strip()
     if not raw:
         return default
-    try:
-        value = int(raw)
-    except ValueError:
-        raise ValueError(f"{key} must be an integer") from None
-    if value < minimum:
-        raise ValueError(f"{key} must be >= {minimum}")
+    if not raw.isdigit() or len(raw) > 10:
+        raise ValueError(f"{key} must be an integer between {minimum} and {MAX_SETTING}")
+    value = int(raw)
+    if value < minimum or value > MAX_SETTING:
+        raise ValueError(f"{key} must be between {minimum} and {MAX_SETTING}")
     return value
 
 
