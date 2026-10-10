@@ -1,0 +1,284 @@
+openapi: 3.1.0
+info:
+  title: Hybrid Cloud Works Cloud Assessment API (lab edition)
+  version: 0.1.0
+  description: |
+    Upload-only assessment API over an Azure Resource Graph export. Never connects to Azure, never accepts credentials,
+    holds everything in memory, expires assessments after CA_TTL_MINUTES (120 by default).
+    Every response carries `X-Addon-Id: cloud-assessment`, `X-Addon-Version`, `X-Content-Type-Options: nosniff`,
+    `Referrer-Policy: no-referrer`, `Content-Security-Policy` (frame-ancestors from env) and `Cache-Control`.
+    Errors are `{ error: { code, message, details? } }`. Any other `/api/*` path answers `404 not_found`; a known path
+    with another method answers `405 method_not_allowed`; an unexpected failure answers `500 internal_error`. `tests/contract/test_openapi_routes.py` keeps this file and the
+    implementation aligned two-way (paths and methods).
+servers:
+  - url: /
+paths:
+  /api/health:
+    get:
+      summary: Liveness and edition facts (flat standard envelope; answered without any upstream dependency)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+        "503": { description: "ok:false when the catalog failed to load (the process refuses to start instead)" }
+  /api/config:
+    get:
+      summary: Public pane settings (verification site key, limits, frameworks, site origins)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Config" } } } }
+  /api/catalog:
+    get:
+      summary: The criteria catalog (texts, remediation, links; evaluator kinds only)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/CatalogResponse" } } } }
+  /api/sample.json:
+    get:
+      summary: Fictional sample export (az graph query envelope, 40 rows, subscription 00000000-0000-0000-0000-000000000001)
+      responses:
+        "200": { description: application/json attachment }
+  /api/sample.csv:
+    get:
+      summary: The same sample as a Resource Graph Explorer CSV
+      responses:
+        "200": { description: text/csv attachment }
+  /api/assessments:
+    post:
+      summary: Create an assessment from a Resource Graph export
+      description: |
+        Order of checks: rate limit (429), media type (415), human verification (503 when not configured and not
+        explicitly allowed; 403 when the token is missing or refused), body size (413, reading stops at the limit),
+        JSON/shape (400), rows (422), concurrency (503 overloaded after 2 s). Header `x-turnstile-token` carries the
+        verification token; siteverify must echo `action = cloud-assessment-upload`.
+      parameters:
+        - { name: x-turnstile-token, in: header, required: false, schema: { type: string, maxLength: 2048 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/CreateAssessmentRequest"
+                - type: array
+                  description: Bare array of Resource Graph rows
+                  items: { type: object }
+                - $ref: "#/components/schemas/GraphQueryEnvelope"
+          text/csv:
+            schema: { type: string, description: Resource Graph Explorer CSV or the portal "All resources" CSV }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/CreateAssessmentResponse" } } } }
+        "400": { description: "invalid_json | invalid_request" }
+        "403": { description: "turnstile_failed (details.codes)" }
+        "413": { description: too_large }
+        "415": { description: unsupported_media_type }
+        "422": { description: "ingestion_failed (details.reason, details.warnings: row numbers and column names only) | too_many_rows (details.rows, details.maxRows)" }
+        "429": { description: "rate_limited (Retry-After)" }
+        "503": { description: "overloaded (Retry-After) | turnstile_not_configured" }
+  /api/assessments/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+      - { $ref: "#/components/parameters/OwnerToken" }
+    get:
+      summary: The full assessment document, the bundle file list and the expiry
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { assessment: { $ref: "#/components/schemas/Assessment" }, files: { type: array, items: { type: string } }, expiresAt: { type: string, format: date-time } } } } } }
+        "404": { description: Not found, expired, or owner token missing or wrong (indistinguishable by design) }
+    delete:
+      summary: Delete the assessment and every derived file immediately
+      responses:
+        "200": { description: "{ deleted: true }" }
+        "404": { description: not_found }
+  /api/assessments/{id}/report.md:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+      - { $ref: "#/components/parameters/OwnerToken" }
+    get:
+      summary: The Markdown report (attachment)
+      responses:
+        "200": { description: "text/markdown" }
+        "404": { description: not_found }
+  /api/assessments/{id}/report.json:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+      - { $ref: "#/components/parameters/OwnerToken" }
+    get:
+      summary: The assessment document with model and catalog versions
+      responses:
+        "200": { description: application/json }
+        "404": { description: not_found }
+  /api/assessments/{id}/bundle.zip:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+      - { $ref: "#/components/parameters/OwnerToken" }
+    get:
+      summary: report.md, report.json, findings.csv and NOT-AN-AUDIT.md zipped with STORE (attachment)
+      responses:
+        "200": { description: application/zip }
+        "404": { description: not_found }
+  /api/assessments/{id}/files/{path}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+      - { name: path, in: path, required: true, schema: { type: string, enum: [report.md, report.json, findings.csv, NOT-AN-AUDIT.md] } }
+      - { $ref: "#/components/parameters/OwnerToken" }
+    get:
+      summary: One bundle file by exact name
+      responses:
+        "200": { description: File content with a type-appropriate content-type }
+        "404": { description: not_found }
+components:
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    OwnerToken: { name: x-owner-token, in: header, required: true, schema: { type: string } }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, pattern: "^[a-z_]+$" }
+            message: { type: string }
+            details: { type: object }
+    Health:
+      type: object
+      required: [ok, id, version, edition, capabilities, asOf, siteOrigins, turnstile, azureConnectivity, catalog, limits]
+      properties:
+        ok: { type: boolean }
+        id: { const: cloud-assessment }
+        version: { type: string, pattern: "^\\d+\\.\\d+\\.\\d+" }
+        edition: { const: lab }
+        capabilities: { type: array, items: { type: string, maxLength: 40 }, maxItems: 20 }
+        asOf: { type: string, format: date-time }
+        siteOrigins: { type: array, items: { type: string, format: uri } }
+        turnstile: { type: object, properties: { required: { type: boolean }, siteKey: { type: [string, "null"] } } }
+        azureConnectivity: { const: disabled-by-design }
+        catalog: { type: object, properties: { version: { type: string }, count: { type: integer } } }
+        limits: { type: object, properties: { maxUploadBytes: { type: integer }, maxRows: { type: integer }, ttlMinutes: { type: integer } } }
+    Config:
+      type: object
+      properties:
+        turnstileSiteKey: { type: [string, "null"] }
+        turnstileRequired: { type: boolean }
+        turnstileAction: { const: cloud-assessment-upload }
+        limits: { type: object, properties: { maxUploadBytes: { type: integer }, maxRows: { type: integer } } }
+        ttlMinutes: { type: integer }
+        frameworks: { type: array, items: { type: object, properties: { id: { type: string }, label: { type: string } } } }
+        siteOrigins: { type: array, items: { type: string } }
+    CatalogResponse:
+      type: object
+      properties:
+        version: { type: string }
+        retrievedOn: { type: string, format: date }
+        count: { type: integer }
+        attribution: { type: array, items: { type: string } }
+        criteria:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, pattern: "^CA-(FIN|WAF|ZT)-\\d{3}$" }
+              framework: { enum: [finops, waf-cost, zero-trust] }
+              pillar: { type: string }
+              severity: { enum: [critical, high, medium, low] }
+              resourceTypes: { type: array, items: { type: string } }
+              title: { type: string }
+              text: { type: string, description: The single replaceable field (R-005) }
+              remediation: { type: string }
+              learnUrl: { type: string, format: uri }
+              verify: { type: boolean, description: "true while the learnUrl is marked [VERIFY]" }
+              retrievedOn: { type: string, format: date }
+              checks: { type: array, items: { type: object, properties: { kind: { enum: [tag-present, property-equals, property-exists, sku-in, count-threshold, cross-resource] } } } }
+              anyPass: { type: boolean }
+    GraphQueryEnvelope:
+      type: object
+      required: [data]
+      properties:
+        count: { type: integer }
+        data: { type: array, items: { type: object } }
+        skip_token: { type: [string, "null"], description: "non-null yields the warning: export is paged; only the first page was uploaded" }
+        total_records: { type: integer }
+    CreateAssessmentRequest:
+      type: object
+      required: [format, content]
+      additionalProperties: false
+      properties:
+        format: { enum: [arg-json, arg-csv] }
+        content: { type: string, maxLength: 5242880 }
+        fileName: { type: string, pattern: "^[\\w .()-]{1,120}\\.(json|csv)$" }
+        options:
+          type: object
+          additionalProperties: false
+          properties:
+            weights:
+              type: object
+              description: Pillar weight overrides per framework, clamped to [0, 10]; unknown keys are ignored
+              additionalProperties: { type: object, additionalProperties: { type: number } }
+    Scorecard:
+      type: object
+      properties:
+        framework: { enum: [finops, waf-cost, zero-trust] }
+        pillar: { type: [string, "null"], description: null is the framework total }
+        weight: { type: number }
+        observed: { type: integer }
+        pass: { type: integer }
+        fail: { type: integer }
+        unknown: { type: integer }
+        notApplicable: { type: integer }
+        score: { type: [number, "null"], description: weighted pass / weighted observed x 100; unknown never lowers it }
+        coverage: { type: [number, "null"], description: observed / (observed + unknown) }
+    Finding:
+      type: object
+      properties:
+        criterionId: { type: string }
+        framework: { type: string }
+        pillar: { type: string }
+        severity: { enum: [critical, high, medium, low] }
+        resourceId: { type: [string, "null"] }
+        resourceName: { type: [string, "null"] }
+        resourceType: { type: [string, "null"] }
+        state: { enum: [observed, unknown, not-applicable] }
+        result: { enum: [pass, fail, null] }
+        evidence: { type: object, properties: { path: { type: [string, "null"] }, observed: {}, expected: {} } }
+        reason: { type: string }
+        remediation: { type: string }
+        learnUrl: { type: string }
+    Summary:
+      type: object
+      properties:
+        resourceCount: { type: integer }
+        byType: { type: object, additionalProperties: { type: integer } }
+        criteriaCount: { type: integer }
+        findingsCount: { type: integer }
+        observed: { type: integer }
+        pass: { type: integer }
+        fail: { type: integer }
+        unknown: { type: integer }
+        notApplicable: { type: integer }
+    Assessment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+        model_version: { const: 1 }
+        catalog_version: { type: string }
+        core_version: { type: string }
+        source_format: { enum: [arg-json, arg-csv] }
+        file_name: { type: [string, "null"] }
+        summary: { $ref: "#/components/schemas/Summary" }
+        scorecards: { type: array, items: { $ref: "#/components/schemas/Scorecard" } }
+        findings: { type: array, items: { $ref: "#/components/schemas/Finding" } }
+        unknown_by_design: { type: array, items: { type: object, properties: { topic: { type: string }, reason: { type: string }, criteria: { type: array, items: { type: string } } } } }
+        ingestion_warnings: { type: array, items: { type: string } }
+    CreateAssessmentResponse:
+      type: object
+      required: [assessmentId, ownerToken, expiresAt, summary, scorecards, ingestionWarnings]
+      properties:
+        assessmentId: { type: string, format: uuid }
+        ownerToken: { type: string, description: Shown once; required for every later call; stored hashed }
+        expiresAt: { type: string, format: date-time }
+        summary: { $ref: "#/components/schemas/Summary" }
+        scorecards: { type: array, items: { $ref: "#/components/schemas/Scorecard" } }
+        ingestionWarnings: { type: array, items: { type: string } }

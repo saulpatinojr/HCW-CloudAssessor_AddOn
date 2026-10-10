@@ -1,0 +1,16 @@
+Hybrid Cloud Works Cloud Assessment (lab edition) and the cloud-assessor-core engine seed
+Copyright (c) 2026 Hybrid Cloud Works. Licensed under MIT (see LICENSE).
+
+[REVIEW REQUIRED] License: the upstream product (HCW-CloudAssessor_App, R-003) has not decided its license. This edition
+needs one now and uses MIT to match the sibling AddOn; the owner confirms or replaces it before publication.
+
+[REVIEW REQUIRED] Attribution (R-005): the criteria in packages/cloud-assessor-core/catalog/criteria.json are paraphrased
+from the FinOps Foundation Framework (https://www.finops.org/framework/) and the Microsoft Azure Well-Architected
+Framework and Azure product documentation (https://learn.microsoft.com/), each with a reference link and a retrieval
+date. No framework text is reproduced; `text` is the single replaceable field per criterion. This project is not
+affiliated with or endorsed by the FinOps Foundation or Microsoft. FinOps is a trademark of the FinOps Foundation;
+Microsoft, Azure and Entra are trademarks of Microsoft Corporation. Every reference link is marked [VERIFY] in the
+catalog (`verify: true`) until the owner confirms it.
+
+The pane's theme tokens (web/theme.css) are copied from the hybridcloudworks.com website repository
+(HCW-HybridCloudWorks, frontend/src/index.css) on 2026-10-10. Generated reports are illustrative and are not an audit.
