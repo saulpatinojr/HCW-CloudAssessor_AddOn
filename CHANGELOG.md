@@ -5,6 +5,7 @@ All notable changes to this repository are recorded here. The format follows Kee
 ## [Unreleased] — 0.1.0
 
 ### Changed
+- Code scanning: the e2e host page accepts only a loopback `?addon=` origin for the frame and the message filter, and the unit test asserts the exact `script-src` and `frame-src` source lists instead of a substring (closes the three CodeQL alerts raised on #5; test and harness code only, no runtime change).
 - Cross-AddOn standardization (program Phase 5D): the concurrency-cap answer is `503 overloaded` (was `busy`), the code
   the Azure Migrate AddOn already uses; log event renamed to match.
 - Numeric settings are bounded to 1,000,000,000 (`MAX_SETTING`), so an absurd value cannot push a TTL, window or
