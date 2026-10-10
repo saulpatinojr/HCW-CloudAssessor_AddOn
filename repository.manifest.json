@@ -1,0 +1,32 @@
+{
+  "name": "hcw-cloudassessor-addon",
+  "version": "0.1.0",
+  "archive": "hcw-cloudassessor-addon.zip",
+  "archiveLayout": "repository files at archive root (no nested parent directory)",
+  "requiredFiles": [
+    "README.md", "CLAUDE.md", "AGENTS.md", "SECURITY.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "LICENSE", "NOTICE", "CHANGELOG.md", "VALIDATION.md",
+    "pyproject.toml", "uv.lock", "requirements.lock.txt", ".python-version", "ruff.toml", "Makefile", ".env.example", ".gitignore", ".dockerignore", "docker-compose.yml",
+    "packages/cloud-assessor-core/pyproject.toml", "packages/cloud-assessor-core/README.md",
+    "packages/cloud-assessor-core/catalog/criteria.json", "packages/cloud-assessor-core/catalog/schema.json", "packages/cloud-assessor-core/catalog/scoring.json",
+    "packages/cloud-assessor-core/src/cloud_assessor_core/model.py", "packages/cloud-assessor-core/src/cloud_assessor_core/evaluate/evaluators.py",
+    "src/cloud_assessment_lab/app.py", "src/cloud_assessment_lab/edition.py", "src/cloud_assessment_lab/__main__.py",
+    "web/index.html", "web/app.js", "web/styles.css", "web/theme.css",
+    "samples/sample-resource-graph.json", "samples/sample-resource-graph.csv", "samples/sample-all-resources-export.csv",
+    "docs/README.md", "docs/website-integration/integration-guide.md", "docs/website-integration/routes.md", "docs/api/openapi.yaml",
+    "docs/deployment/lab-host.md", "docs/deployment/appliance.md", "docs/operations/runbook.md", "docs/security/threat-model.md",
+    "docs/demo/user-guide.md", "docs/demo/output-bundle.md", "docs/rules/catalog.md",
+    "docs/adr/README.md", "docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md",
+    "docs/adr/ADR-0002-shared-addon-skeleton-no-kit-yet.md", "docs/adr/ADR-0003-lab-edition-on-the-lab-host-appliance-on-container-apps.md",
+    "docs/adr/ADR-0008-hard-edition-boundary-the-demo-cannot-construct-an-azure-provider.md",
+    "docs/adr/ADR-0011-uploads-are-never-persisted-and-every-demo-conclusion-carries-an-evidence-state.md",
+    "docs/adr/ADR-0028-appliance-upstream-web-front-downstream.md",
+    "scripts/check-catalog.py", "scripts/package-repository.sh", "scripts/package-repository.ps1",
+    ".github/CODEOWNERS", ".github/dependabot.yml", ".github/pull_request_template.md", ".github/copilot-instructions.md",
+    ".github/workflows/ci.yml", ".github/workflows/security.yml", ".github/workflows/publish-images.yml", ".github/workflows/core-update.yml",
+    "infrastructure/README.md", "infrastructure/docker/Dockerfile", "infrastructure/docker/versions.env",
+    "tests/conftest.py", "tests/unit/test_api.py", "tests/contract/test_openapi_routes.py", "tests/security/test_edition_boundary.py",
+    "tests/security/test_no_secrets.py", "tests/security/test_logging_content_free.py", "tests/end_to_end/test_repository_manifest.py",
+    "tests/e2e/lab.spec.ts", "tests/e2e/host-page.html", "tests/e2e/playwright.config.ts"
+  ],
+  "packageExcludes": [".git/", ".venv/", "__pycache__/", "*.pyc", ".pytest_cache/", ".ruff_cache/", ".coverage", "htmlcov/", "node_modules/", "test-results/", "playwright-report/", ".env", "*.zip", "*.log", ".local/", "data/", ".DS_Store", "hcw-cloudassessor-addon.zip"]
+}
