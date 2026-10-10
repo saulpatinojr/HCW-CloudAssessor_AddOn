@@ -1,9 +1,13 @@
 # Actions are pinned to full commit SHAs (version in the trailing comment); Dependabot (github-actions ecosystem) proposes updates.
-# Upstream -> downstream flow (ADR-0001, ADR-0028 by analogy). INERT until HCW-CloudAssessor_App publishes a release that
-# carries packages/cloud-assessor-core: this repository then pins
-#   cloud-assessor-core @ git+https://github.com/saulpatinojr/HCW-CloudAssessor_App@<tag>#subdirectory=packages/cloud-assessor-core
-# in pyproject.toml ([tool.uv.sources], CORE_REF below) and deletes its own seed under packages/. Until then the
-# workspace member is the seed and the comparison below finds no CORE_REF and exits cleanly.
+# Upstream -> downstream flow (ADR-0001, ADR-0028 by analogy). INERT until HCW-CloudAssessor_App publishes a release
+# (publish-core.yml attaches the cloud-assessor-core wheel to the GitHub Release of every v* tag; PyPI there is optional
+# and not needed here). This repository then pins the release asset by URL in pyproject.toml, on one line, as
+#   "cloud-assessor-core @ https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v<version>/cloud_assessor_core-<version>-py3-none-any.whl",  # CORE_REF v<version>
+# `uv lock` records the wheel's sha256 and `uv export` writes it to requirements.lock.txt, so the image's
+# `pip install --require-hashes` keeps verifying every third-party file (a git+https pin cannot be hash-checked and would
+# break that build). Adopting the wheel deletes the seed under packages/cloud-assessor-core and the Dockerfile's two COPY
+# lines that place it. Until the CORE_REF line exists, the workspace member is the seed and the comparison below finds
+# nothing and exits cleanly.
 # Pull requests opened with GITHUB_TOKEN do not trigger other workflows, so the compatibility check runs here.
 name: core-update
 on:
@@ -28,7 +32,7 @@ jobs:
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", REQUESTED: "${{ inputs.ref }}" }
         run: |
           set -euo pipefail
-          current="$(grep -oE 'HCW-CloudAssessor_App@v[0-9][0-9A-Za-z.+-]*' pyproject.toml | head -1 | sed 's/.*@//' || true)"
+          current="$(grep -oE "#[[:space:]]*CORE_REF[[:space:]]+v[0-9][0-9A-Za-z.+-]*" pyproject.toml | head -1 | awk '{print $NF}' || true)"
           if [ -z "$current" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "::notice::no CORE_REF in pyproject.toml: the engine seed is still local (packages/cloud-assessor-core); nothing to adopt yet"
@@ -48,7 +52,10 @@ jobs:
         env: { LATEST: "${{ steps.refs.outputs.latest }}", CURRENT: "${{ steps.refs.outputs.current }}" }
         run: |
           set -euo pipefail
-          sed -i "s|HCW-CloudAssessor_App@${CURRENT}|HCW-CloudAssessor_App@${LATEST}|g" pyproject.toml
+          # One line carries the release tag, the wheel file name (version without the v) and the CORE_REF marker; all move together.
+          cur_ver="${CURRENT#v}"; new_ver="${LATEST#v}"
+          sed -i -E "s|releases/download/${CURRENT}/cloud_assessor_core-${cur_ver}-py3-none-any\.whl(\",?[[:space:]]*#[[:space:]]*CORE_REF[[:space:]]+)${CURRENT}|releases/download/${LATEST}/cloud_assessor_core-${new_ver}-py3-none-any.whl\1${LATEST}|" pyproject.toml
+          grep -q "CORE_REF ${LATEST}" pyproject.toml
           uv lock --upgrade-package cloud-assessor-core
           uv export --format requirements-txt --no-dev --no-emit-project --no-emit-workspace --no-header -o requirements.lock.txt
           git --no-pager diff --stat

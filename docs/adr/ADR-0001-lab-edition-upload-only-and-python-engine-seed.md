@@ -20,7 +20,9 @@ downstream, web-front subset. With no upstream engine to consume, the seed has t
    `packages/cloud-assessor-core` (pydantic only; no HTTP import), with its catalog (`criteria.json`, generated
    `schema.json`, `scoring.json`) and its tests beside it. The App adopts the package verbatim from this repository's
    tag `v0.1.0`; after the App's first release, this repository pins
-   `cloud-assessor-core @ git+https://github.com/saulpatinojr/HCW-CloudAssessor_App@<tag>#subdirectory=packages/cloud-assessor-core`,
+   the wheel `publish-core.yml` attaches to that release, by URL and sha256
+   (`cloud-assessor-core @ https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/<tag>/cloud_assessor_core-<version>-py3-none-any.whl`;
+   amended 2026-10-10: the `git+https` form first written here cannot be verified by the image's `pip install --require-hashes`),
    deletes the seed, and `core-update.yml` adopts later releases (compatible / needs-adaptation pull requests).
 3. **Honesty is in the data.** Findings carry `state: observed | unknown | not-applicable`; scorecards carry `coverage`;
    unknown lowers coverage, never score; the things an export cannot show are criteria that answer `unknown` with a
