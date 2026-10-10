@@ -1,0 +1,28 @@
+# Threat model (lab edition)
+
+| Asset | Threat | Control |
+|---|---|---|
+| Uploaded export (resource ids, subscription ids, tags, properties) | Disclosure to other visitors | UUID4 ids; 192-bit owner token (`secrets.token_urlsafe(24)`) returned once, stored as a SHA-256 hash, compared with `hmac.compare_digest`; 404 for unknown, foreign, expired or token-less requests (indistinguishable); in-memory only; 120-minute TTL sweep every 60 s; immediate `DELETE`; a restart purges everything |
+| | Disclosure via logs | One guarded writer (`security/logging.py` -> `redaction.assert_no_visitor_data`) refuses any value that is not a count, duration, flag or allowed word; exception text passes `scrub()` (GUIDs, `/subscriptions/…` paths, secret-shaped strings); no uvicorn access log; ingestion warnings cite row numbers and column names only; `tests/security/test_logging_content_free.py` |
+| | Disclosure via error bodies | `details` carries codes, counts and field names, never cell content |
+| Service | Resource exhaustion | 5 MB streamed limit (reading stops past it; `Content-Length` beyond it is refused before reading); 5,000 rows; 200 stored items with oldest-first eviction; per-client token bucket (10 uploads per 10 minutes, `Retry-After`); `asyncio.Semaphore(2)` with `503 busy` after 2 s; container 512m / 256 pids / one CPU, read-only root, `cap_drop ALL`, `no-new-privileges`, uid 10001 |
+| | Bots | Human verification on `POST /api/assessments` with the `action` echo (`cloud-assessment-upload`) required; **fail closed**: without `TURNSTILE_SECRET` uploads answer `503 turnstile_not_configured` unless `CA_ALLOW_NO_TURNSTILE=1`, which is for local development and e2e only and is logged as a warning at startup |
+| | Client-address spoofing | Socket peer by default; the first `X-Forwarded-For` value only when `CA_TRUST_PROXY=1` (the lab host's reverse proxy sets it and nothing else can reach the loopback port); `CF-Connecting-IP` is never read |
+| | CSV formula injection | Leading `= + - @ \t \r` neutralised on ingest (every CSV cell) and in `findings.csv` (every cell, including JSON-encoded evidence) |
+| | Path traversal | Static files resolve under the configured directory or 404; samples by fixed name; bundle files by exact key from a closed list; zip paths validated |
+| | XSS | The pane writes every dynamic string through text nodes; CSP `default-src 'self'`, no inline script, `script-src`/`frame-src` admit the verification origin only when a site key is set; `base-uri 'none'`, `form-action 'self'`, `object-src 'none'` |
+| | Clickjacking / framing by others | `frame-ancestors` from `CA_FRAME_ANCESTORS` (default `'none'`, plus `X-Frame-Options: DENY` then; the two site origins on the lab host, where Caddy enforces the same); top-level visits are redirected by the host |
+| | Cross-origin misuse of the API | Exact-origin CORS from `CA_ALLOWED_ORIGINS` (empty in production: the pane is same-origin); preflight answers 204 only for a listed origin and 403 otherwise, never a wildcard |
+| Azure estates | The lab reaching Azure | No cloud SDK installed (hash-pinned lock has none; Dependabot groups any attempt); `edition.py` refuses to start when `azure`/`msal`/`boto3` is importable or any of `IDENTITY_ENDPOINT`, `MSI_ENDPOINT`, `AZURE_CLIENT_SECRET`, `AZURE_FEDERATED_TOKEN_FILE`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` is set, and installs a `sys.meta_path` finder that answers those imports with `ImportError`; `/api/health` reports `azureConnectivity: disabled-by-design`; `tests/security/test_edition_boundary.py` (manifests, lock, AST walk, endpoint strings, fresh-process refusal, pane inputs, Dockerfile); `publish-images.yml` proves `import azure` fails and a container with `IDENTITY_ENDPOINT` exits inside the built image |
+| Credentials | Phishing | No credential fields exist (the only input is the file picker); the notice says what is never asked; the boundary test asserts no password inputs |
+| Catalog | Tampering | Read from the installed package; `check-catalog.py` enforces the JSON Schema drift check and the `learnUrl` host allow-list in CI; version and count in `/api/health`; the loader fails closed on any validation error |
+| Output | Misrepresented as an audit | Every scorecard carries coverage and the sentence "Score covers N of M checks; K could not be assessed from an export"; `NOT-AN-AUDIT.md` in every bundle; attribution in the report footer; "Unknown by design" panel |
+| Site | Message spoofing to the pane page | The site accepts only `origin === the AddOn origin`, `source === frame.contentWindow`, `type/id/state` known; the pane posts only to `siteOrigins`, never `*` |
+| Supply chain | Tampered dependencies or actions | `uv.lock` and `requirements.lock.txt` with hashes (`pip --require-hashes --no-deps`); base image by digest with a CI drift check; every action pinned by full SHA; Trivy before push; provenance, SBOM and attestation on every published image; `pip-audit` weekly |
+
+Secrets: `TURNSTILE_SECRET` exists only in the lab host's Ansible vault (`vault_addon_cloud_assessment_turnstile_secret`);
+public values (`CA_TURNSTILE_SITE_KEY`, origins, limits) in the role's env. Visitor data in the report is returned only
+to the owner-token holder; it is the visitor's own data and is not redacted there, only in logs.
+
+Out of scope for the lab edition (appliance concerns, upstream): Entra token validation, approvals, persistence, live
+cost or Graph reads, scope allow-lists. Out of scope by design: anything that would need a credential.

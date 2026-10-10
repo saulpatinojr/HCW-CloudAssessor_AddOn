@@ -1,0 +1,93 @@
+# Actions are pinned to full commit SHAs (version in the trailing comment); Dependabot (github-actions ecosystem) proposes updates.
+# Upstream -> downstream flow (ADR-0001, ADR-0028 by analogy). INERT until HCW-CloudAssessor_App publishes a release that
+# carries packages/cloud-assessor-core: this repository then pins
+#   cloud-assessor-core @ git+https://github.com/saulpatinojr/HCW-CloudAssessor_App@<tag>#subdirectory=packages/cloud-assessor-core
+# in pyproject.toml ([tool.uv.sources], CORE_REF below) and deletes its own seed under packages/. Until then the
+# workspace member is the seed and the comparison below finds no CORE_REF and exits cleanly.
+# Pull requests opened with GITHUB_TOKEN do not trigger other workflows, so the compatibility check runs here.
+name: core-update
+on:
+  schedule: [{ cron: "41 */6 * * *" }]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Upstream release tag to adopt (default: latest release)"
+        required: false
+permissions:
+  contents: write
+  pull-requests: write
+env:
+  UPSTREAM: saulpatinojr/HCW-CloudAssessor_App
+jobs:
+  check-and-bump:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - id: refs
+        name: Compare the pinned CORE_REF with the latest upstream release
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", REQUESTED: "${{ inputs.ref }}" }
+        run: |
+          set -euo pipefail
+          current="$(grep -oE 'HCW-CloudAssessor_App@v[0-9][0-9A-Za-z.+-]*' pyproject.toml | head -1 | sed 's/.*@//' || true)"
+          if [ -z "$current" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::no CORE_REF in pyproject.toml: the engine seed is still local (packages/cloud-assessor-core); nothing to adopt yet"
+            exit 0
+          fi
+          latest="${REQUESTED:-$(gh api "repos/${UPSTREAM}/releases/latest" --jq .tag_name 2>/dev/null || true)}"
+          if [ -z "$latest" ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; echo "::notice::upstream has no release yet"; exit 0; fi
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"; echo "current=$current" >> "$GITHUB_OUTPUT"
+          if [ "$latest" = "$current" ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; echo "already at $current"; else echo "changed=true" >> "$GITHUB_OUTPUT"; echo "$current -> $latest"; fi
+      - if: steps.refs.outputs.changed == 'true'
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with: { python-version: "3.14" }
+      - if: steps.refs.outputs.changed == 'true'
+        run: python -m pip install "uv==0.11.32"
+      - if: steps.refs.outputs.changed == 'true'
+        name: Bump CORE_REF and re-lock
+        env: { LATEST: "${{ steps.refs.outputs.latest }}", CURRENT: "${{ steps.refs.outputs.current }}" }
+        run: |
+          set -euo pipefail
+          sed -i "s|HCW-CloudAssessor_App@${CURRENT}|HCW-CloudAssessor_App@${LATEST}|g" pyproject.toml
+          uv lock --upgrade-package cloud-assessor-core
+          uv export --format requirements-txt --no-dev --no-emit-project --no-emit-workspace --no-header -o requirements.lock.txt
+          git --no-pager diff --stat
+      - if: steps.refs.outputs.changed == 'true'
+        id: compat
+        name: Compatibility check (lint, tests, catalog, browser e2e)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          uv sync --frozen --all-packages
+          uv run ruff check . && uv run python scripts/check-catalog.py && uv run pytest -q
+          npm init -y >/dev/null && npm install --no-save --no-audit --no-fund "@playwright/test@1.63.0" && npx playwright install --with-deps chromium
+          CI=1 npx playwright test -c tests/e2e/playwright.config.ts
+      - if: steps.refs.outputs.changed == 'true'
+        id: pr
+        name: Open the bump pull request (ready for review)
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          branch: core-update/${{ steps.refs.outputs.latest }}
+          title: "core: adopt upstream ${{ steps.refs.outputs.latest }} (${{ steps.compat.outcome == 'success' && 'compatible' || 'needs adaptation' }})"
+          commit-message: "core: bump cloud-assessor-core ${{ steps.refs.outputs.current }} -> ${{ steps.refs.outputs.latest }}"
+          labels: core-update,${{ steps.compat.outcome == 'success' && 'compatible' || 'needs-adaptation' }}
+          add-paths: |
+            pyproject.toml
+            uv.lock
+            requirements.lock.txt
+          body: |
+            Upstream `saulpatinojr/HCW-CloudAssessor_App` released **${{ steps.refs.outputs.latest }}** (this edition pinned `${{ steps.refs.outputs.current }}`).
+
+            Compatibility check in this workflow run (lint, unit, contract, security, catalog, Playwright e2e): **${{ steps.compat.outcome }}**.
+            Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            - compatible: merge (automatic if the repository variable `CORE_AUTOMERGE` is `true`).
+            - needs adaptation: fix this edition on this branch, then merge.
+
+            ADR-0001 (engine seeded here, handed upstream), ADR-0028 (downstream flow, by analogy).
+      - if: steps.refs.outputs.changed == 'true' && steps.compat.outcome == 'success' && vars.CORE_AUTOMERGE == 'true' && steps.pr.outputs.pull-request-number != ''
+        name: Auto-merge the compatible bump
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+        run: gh pr merge --squash --auto "${{ steps.pr.outputs.pull-request-number }}"
+      - if: steps.refs.outputs.changed == 'true' && steps.compat.outcome != 'success'
+        run: echo "::warning::Upstream ${{ steps.refs.outputs.latest }} is not compatible with this edition; see the pull request."
