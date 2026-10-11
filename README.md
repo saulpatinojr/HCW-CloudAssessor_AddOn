@@ -17,6 +17,10 @@ holds its owner token, and expires after two hours or when deleted. Every scorec
 export cannot show spend, budgets, role assignments, diagnostic settings, policy state, Defender plans or traffic, and the
 report says so in data (`unknown`), not only in prose. It is not an audit.
 
+**Where to try it.** The pane will appear at [hybridcloudworks.com/tools/cloud-assessment](https://hybridcloudworks.com/tools/cloud-assessment)
+once the first image is published; until then, run it on your own machine with the Quick start below and open
+`http://127.0.0.1:8080`. Either way there is no account and nothing to install in Azure: you export, you upload, you read.
+
 > **Status:** lab edition, not production. Limitations are recorded in [`VALIDATION.md`](VALIDATION.md). Every criterion's
 > reference link is marked `[VERIFY]` until the owner confirms it; the attribution wording awaits owner review
 > (`[REVIEW REQUIRED]`, R-005).
@@ -25,7 +29,7 @@ report says so in data (`unknown`), not only in prose. It is not an audit.
 
 ```mermaid
 flowchart LR
-  App["HCW-CloudAssessor_App<br/>upstream (planned): adopts the engine · appliance edition on Azure"]
+  App["HCW-CloudAssessor_App<br/>upstream: holds the engine and the appliance edition on Azure"]
   subgraph AddOn["HCW-CloudAssessor_AddOn (this repository)"]
     Core["packages/cloud-assessor-core<br/>engine seed: model · ingestion · catalog · evaluators · score · reports"]
     Lab["src/cloud_assessment_lab<br/>lab edition: FastAPI, upload-only, in-memory"]
@@ -42,10 +46,11 @@ flowchart LR
   App -. "every release: core-update PR (compatible / needs-adaptation)" .-> AddOn
 ```
 
-The engine is seeded **here** so the lab can ship now, and moves upstream unchanged when the App adopts it
+The engine was seeded **here** so the lab could ship first, and the App has since adopted it unchanged
 ([`docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md`](docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md)).
-After that, `.github/workflows/core-update.yml` watches upstream releases, tests each one against this edition's suites
-and opens the bump pull request. Nothing here can reach Azure: `tests/security/test_edition_boundary.py` fails the build
+When the App's first release (`v0.1.0`) is tagged, `.github/workflows/core-update.yml` pins its engine wheel by URL and
+hash, this repository deletes its seed copy, and later releases arrive as pull requests tested against this edition's
+suites. Nothing here can reach Azure: `tests/security/test_edition_boundary.py` fails the build
 if anything could, and `publish-images.yml` proves `import azure` fails inside the built image.
 
 ## Connecting the website
