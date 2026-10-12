@@ -37,7 +37,7 @@ def test_full_env():
     )
     assert s.port == 9000 and s.allowed_origins == ("https://a.example", "https://b.example")
     assert s.site_origins == ("https://hybridcloudworks.com",) and s.turnstile_secret == "s3" and s.turnstile_required
-    assert s.turnstile_enforced and s.trust_proxy and s.log_silent and str(s.static_dir) == "/tmp/web"
+    assert s.turnstile_enforced and s.trust_proxy and s.log_silent and s.static_dir.as_posix() == "/tmp/web"
     assert "s3" not in repr(s), "the secret never appears in repr"
 
 
