@@ -11,7 +11,10 @@ All notable changes to this repository are recorded here. The format follows Kee
   committed export is gone: the image's build stage runs `uv export --frozen` from `uv.lock` with the uv CI uses, by
   digest, and still installs with `pip --require-hashes --no-deps`; uv never reaches the lab stage. CI checks
   `uv lock --check` and that the Dockerfile's uv is `UV_VERSION`; `pip-audit` audits the same export. The engine
-  declares `pydantic>=2.14,<3` (the app keeps the exact pin), so the two can no longer be bumped apart.
+  declares `pydantic>=2.14,<3` (the app keeps the exact pin), so the two cannot be bumped apart while the engine is
+  the seed; the App's engine must carry the same range before its wheel is adopted (HCW-CloudAssessor_App#15).
+  CI builds the image on every pull request, resolves the uv digest for `UV_VERSION` rather than trusting any
+  digest, and a weekly job flags the base drifting from the website's pin.
 - Base image `python:3.14.8-slim-trixie` by digest, the website's current pin (CONTRACT-DECISIONS item 20). There is
   no docker Dependabot entry: the base follows the website, and the uv image follows `UV_VERSION`.
 - Repository hygiene: `.github/dependabot.yml` groups GitHub Actions updates under `all-actions` and removes the unused `/tests/e2e` npm entry; `tests/unit/test_config.py` and `tests/unit/test_edition.py` use `as_posix()`, `os.pathsep`, and `SYSTEMROOT` forwarding for cross-platform Windows/Linux test parity.

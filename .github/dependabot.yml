@@ -4,10 +4,13 @@ updates:
   # uv.lock, so every one of its pull requests failed CI. uv updates pyproject.toml and uv.lock together, and the image
   # build exports uv.lock itself (infrastructure/docker/Dockerfile), so nothing else has to move. The workspace root
   # pins every runtime dependency exactly; the engine under packages/ declares a compatible range, so one entry here
-  # covers both and the two can never be bumped apart. pydantic-core is not a direct dependency: it moves with pydantic.
+  # covers both while the engine is the seed. The App's engine must carry the same range before its wheel is adopted
+  # (saulpatinojr/HCW-CloudAssessor_App#15). pydantic-core is not a direct dependency: it moves with pydantic.
   - package-ecosystem: uv
     directory: /
     schedule: { interval: weekly }
+    # Every locked package, as the pip updater covered through the export, not only direct dependencies.
+    allow: [{ dependency-type: all }]
     groups:
       # Pre-emptive: no Azure SDK may ever enter this edition; a grouped PR makes an attempt visible at a glance.
       azure-sdk: { patterns: ["azure-*", "msal*", "msrest*"] }

@@ -23,7 +23,6 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /build
 COPY --from=ghcr.io/astral-sh/uv:0.11.32@sha256:df4cae8f3a96d175e2e5f992e597550000edbe78fdc2594d5cd8de1a217f504c /uv /usr/local/bin/uv
 COPY pyproject.toml uv.lock ./
-COPY packages/cloud-assessor-core/pyproject.toml packages/cloud-assessor-core/
 RUN UV_NO_CACHE=1 uv export --frozen --format requirements-txt --no-dev --no-emit-project --no-emit-workspace --no-header -o requirements.lock.txt \
  && pip install --require-hashes --no-deps --prefix /install -r requirements.lock.txt
 COPY packages/cloud-assessor-core/src/cloud_assessor_core /install/lib/python3.14/site-packages/cloud_assessor_core

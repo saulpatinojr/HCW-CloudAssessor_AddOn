@@ -5,8 +5,8 @@
 #   "cloud-assessor-core @ https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v<version>/cloud_assessor_core-<version>-py3-none-any.whl",  # CORE_REF v<version>
 # `uv lock` records the wheel's sha256 and the image build's `uv export --frozen` carries it, so the image's
 # `pip install --require-hashes` keeps verifying every third-party file (a git+https pin cannot be hash-checked and would
-# break that build). Adopting the wheel deletes the seed under packages/cloud-assessor-core and the Dockerfile's two COPY
-# lines that place it. Until the CORE_REF line exists, the workspace member is the seed and the comparison below finds
+# break that build). Adopting the wheel deletes the seed under packages/cloud-assessor-core, the Dockerfile's two COPY
+# lines that place it, and the `[tool.uv]` workspace and sources entries for it. Until the CORE_REF line exists, the workspace member is the seed and the comparison below finds
 # nothing and exits cleanly.
 # Pull requests opened with GITHUB_TOKEN do not trigger other workflows, so the compatibility check runs here.
 name: core-update
