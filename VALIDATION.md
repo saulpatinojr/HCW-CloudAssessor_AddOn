@@ -11,7 +11,8 @@ starlette 1.7.0, anyio 4.15.1, h11 0.16.0, click 8.5.0, idna 3.20, annotated-typ
 opentelemetry-api 1.45.1, typing-extensions 4.16.0, typing-inspection 0.4.4); dev pytest 9.1.1, pytest-cov 7.1.0,
 ruff 0.17.0, httpx 0.28.1, pip-audit 2.10.1; build hatchling 1.32.4. `uv.lock` and `requirements.lock.txt`
 (`uv export --format requirements-txt --no-dev --no-emit-project --no-emit-workspace --no-header`; hashes are on by
-default) are committed; 14 third-party runtime packages, none Azure.
+default) are committed; 14 third-party runtime packages, none Azure. Since 2026-10-16 the export is not committed:
+the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI checks `uv lock --check`.
 
 | Check | Executed here | Result |
 |---|---|---|
