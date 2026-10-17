@@ -192,7 +192,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pydantic", specifier = "==2.14.0" }]
+requires-dist = [{ name = "pydantic", specifier = ">=2.14,<3" }]
 
 [[package]]
 name = "colorama"

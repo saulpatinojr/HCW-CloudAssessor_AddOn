@@ -11,8 +11,10 @@ website repository (`lab-host/ansible`, role `addons`), and the Azure appliance 
 
 First-party packages are copied into `/usr/local/lib/python3.14/site-packages` as source trees (engine, catalog as
 `cloud_assessor_core/catalog_data`, lab application) rather than built as wheels, so no build backend enters the image.
-`requirements.lock.txt` is `uv export --format requirements-txt --hash --no-dev --no-emit-project --no-emit-workspace`
-and is the only input `pip install --require-hashes --no-deps` reads.
+The build stage exports `uv.lock` with `uv export --frozen --format requirements-txt --no-dev --no-emit-project
+--no-emit-workspace` (hashes on by default), using the uv CI uses by digest. That export is the only input
+`pip install --require-hashes --no-deps` reads, and uv stays in the build stage. There is no committed export: `uv.lock`
+is the one lock, which Dependabot (`uv` ecosystem) updates with `pyproject.toml`.
 
 Image build, Trivy and the `import azure` image check run in CI (`publish-images.yml`); the authoring container had no
 Docker daemon (see `VALIDATION.md`).

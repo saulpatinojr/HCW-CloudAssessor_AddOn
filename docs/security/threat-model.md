@@ -18,7 +18,7 @@
 | Catalog | Tampering | Read from the installed package; `check-catalog.py` enforces the JSON Schema drift check and the `learnUrl` host allow-list in CI; version and count in `/api/health`; the loader fails closed on any validation error |
 | Output | Misrepresented as an audit | Every scorecard carries coverage and the sentence "Score covers N of M checks; K could not be assessed from an export"; `NOT-AN-AUDIT.md` in every bundle; attribution in the report footer; "Unknown by design" panel |
 | Site | Message spoofing to the pane page | The site accepts only `origin === the AddOn origin`, `source === frame.contentWindow`, `type/id/state` known; the pane posts only to `siteOrigins`, never `*` |
-| Supply chain | Tampered dependencies or actions | `uv.lock` and `requirements.lock.txt` with hashes (`pip --require-hashes --no-deps`); base image by digest with a CI drift check; every action pinned by full SHA; Trivy before push; provenance, SBOM and attestation on every published image; `pip-audit` weekly |
+| Supply chain | Tampered dependencies or actions | `uv.lock` with hashes, exported at build and installed with `pip --require-hashes --no-deps`; base image by digest with a CI drift check; every action pinned by full SHA; Trivy before push; provenance, SBOM and attestation on every published image; `pip-audit` weekly |
 
 Secrets: `TURNSTILE_SECRET` exists only in the lab host's Ansible vault (`vault_addon_cloud_assessment_turnstile_secret`);
 public values (`CA_TURNSTILE_SITE_KEY`, origins, limits) in the role's env. Visitor data in the report is returned only

@@ -5,7 +5,7 @@
   "archiveLayout": "repository files at archive root (no nested parent directory)",
   "requiredFiles": [
     "README.md", "CLAUDE.md", "AGENTS.md", "SECURITY.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "LICENSE", "NOTICE", "CHANGELOG.md", "VALIDATION.md",
-    "pyproject.toml", "uv.lock", "requirements.lock.txt", ".python-version", "ruff.toml", "Makefile", ".env.example", ".gitignore", ".dockerignore", "docker-compose.yml",
+    "pyproject.toml", "uv.lock", ".python-version", "ruff.toml", "Makefile", ".env.example", ".gitignore", ".dockerignore", "docker-compose.yml",
     "packages/cloud-assessor-core/pyproject.toml", "packages/cloud-assessor-core/README.md",
     "packages/cloud-assessor-core/catalog/criteria.json", "packages/cloud-assessor-core/catalog/schema.json", "packages/cloud-assessor-core/catalog/scoring.json",
     "packages/cloud-assessor-core/src/cloud_assessor_core/model.py", "packages/cloud-assessor-core/src/cloud_assessor_core/evaluate/evaluators.py",

@@ -5,6 +5,18 @@ All notable changes to this repository are recorded here. The format follows Kee
 ## [Unreleased] — 0.1.0
 
 ### Changed
+- Dependency updates pass CI as Dependabot opens them. Its `pip` updater rewrote `pyproject.toml` and the committed
+  `requirements.lock.txt` but never `uv.lock`, so every one of its pull requests failed the export check (#12 to #15).
+  `.github/dependabot.yml` now uses the `uv` ecosystem, which moves `pyproject.toml` and `uv.lock` together. The
+  committed export is gone: the image's build stage runs `uv export --frozen` from `uv.lock` with the uv CI uses, by
+  digest, and still installs with `pip --require-hashes --no-deps`; uv never reaches the lab stage. CI checks
+  `uv lock --check` and that the Dockerfile's uv is `UV_VERSION`; `pip-audit` audits the same export. The engine
+  declares `pydantic>=2.14,<3` (the app keeps the exact pin), so the two cannot be bumped apart while the engine is
+  the seed; the App's engine must carry the same range before its wheel is adopted (HCW-CloudAssessor_App#15).
+  CI builds the image on every pull request, resolves the uv digest for `UV_VERSION` rather than trusting any
+  digest, and a weekly job flags the base drifting from the website's pin.
+- Base image `python:3.14.8-slim-trixie` by digest, the website's current pin (CONTRACT-DECISIONS item 20). There is
+  no docker Dependabot entry: the base follows the website, and the uv image follows `UV_VERSION`.
 - Repository hygiene: `.github/dependabot.yml` groups GitHub Actions updates under `all-actions` and removes the unused `/tests/e2e` npm entry; `tests/unit/test_config.py` and `tests/unit/test_edition.py` use `as_posix()`, `os.pathsep`, and `SYSTEMROOT` forwarding for cross-platform Windows/Linux test parity.
 - `core-update.yml`'s checkout no longer persists credentials: two Authorization headers made GitHub answer `400` to `create-pull-request`'s push (reproduced twice in the Migrate App's `rules-refresh`, fixed there in saulpatinojr/HCW-AzMigrateOrchestrator_App#24).
 - README: a "where to try it" paragraph for new visitors; the relationship diagram and text say the App now holds the engine and the seed here is deleted at its first release.
