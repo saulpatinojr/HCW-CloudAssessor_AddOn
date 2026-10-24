@@ -42,15 +42,16 @@ flowchart LR
   Lab -- "publish-images.yml on v* tags" --> Image
   Image -- "website repo: addons Ansible role, digest in group_vars" --> Host
   Host -- "frame + status proxy" --> Site
-  Core -. "seed moves upstream at v0.1.0 (ADR-0001)" .-> App
+  Core -. "seed adopted upstream (ADR-0001); the App now releases the engine" .-> App
   App -. "every release: core-update PR (compatible / needs-adaptation)" .-> AddOn
 ```
 
 The engine was seeded **here** so the lab could ship first, and the App has since adopted it unchanged
 ([`docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md`](docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md)).
-When the App's first release (`v0.1.0`) is tagged, `.github/workflows/core-update.yml` pins its engine wheel by URL and
-hash, this repository deletes its seed copy, and later releases arrive as pull requests tested against this edition's
-suites. Nothing here can reach Azure: `tests/security/test_edition_boundary.py` fails the build
+The App now owns the engine and has released it as `v0.2.0` and `v0.2.1`; this repository has not adopted either yet.
+When it pins one of those wheels by URL and hash (a `CORE_REF` line in `pyproject.toml`), it deletes its seed copy, and
+`.github/workflows/core-update.yml` brings later releases as pull requests tested against this edition's suites.
+What is behind, and the steps to adopt: [`docs/whats-new-upstream.md`](docs/whats-new-upstream.md). Nothing here can reach Azure: `tests/security/test_edition_boundary.py` fails the build
 if anything could, and `publish-images.yml` proves `import azure` fails inside the built image.
 
 ## Connecting the website

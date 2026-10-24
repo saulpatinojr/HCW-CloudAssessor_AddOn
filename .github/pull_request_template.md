@@ -18,7 +18,7 @@
 
 ## Engine (if `packages/cloud-assessor-core/src/**` changed)
 
-- [ ] The change is meant to move upstream to `HCW-CloudAssessor_App` unchanged (ADR-0001); `MODEL_VERSION` bumped only if `Resource` changed
+- [ ] The engine is owned upstream (ADR-0001): this change adopts an `HCW-CloudAssessor_App` release unchanged, and `docs/whats-new-upstream.md` records it; `MODEL_VERSION` bumped only if `Resource` changed
 - [ ] No FastAPI, HTTP or cloud SDK import entered the package
 
 ## Infrastructure (if `infrastructure/**` or `docker-compose.yml` changed)
