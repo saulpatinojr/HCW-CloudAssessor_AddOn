@@ -5,8 +5,9 @@
 this file before you change behaviour here, so you know what upstream already did and what is still waiting to be adopted,
 and add an entry (newest first) whenever you adopt an upstream change or find that one reaches this repository.
 
-Last updated: 2026-10-24, from the App at commit `5a7ed0b` (its pull request #38). Everything below was checked against
-GitHub and the two repositories on that date; where something was not checked, it says so.
+Last updated: 2026-10-24, from the App's `main` at commit `e22603c` (its pull request #40, documents only; the last change
+that touched the engine, workflows or locks is #38 at `5a7ed0b`). Everything below was checked against GitHub and the two
+repositories on that date; where something was not checked, it says so.
 
 ## Current upstream state
 
@@ -61,7 +62,7 @@ After that, `core-update.yml` has a `CORE_REF` to compare and will open the pull
 
 ## Entries, newest first
 
-### 2026-10-24: documents corrected, and this file started (App [#40](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/40); this repository's matching pull request)
+### 2026-10-24: documents corrected, and this file started (App [#40](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/40), merged as `e22603c`; this repository's [#27](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/27))
 
 The App's README said no release existed and told readers to install `@v0.1.0` (a tag that was never created), and its
 `REVIEW.md` said the repository had no license and was private. Both are corrected. This repository's `CLAUDE.md`,
