@@ -21,7 +21,7 @@ one page; nothing from this repository is installed into the site bundle.
 ## Catalogue row (`frontend/src/data/addons/catalogue.js`)
 
 The website's row is the authority. This is a copy of it as of 2026-10-24 (website commit 5757bb71, the last change to that file). An earlier copy, written
-before the row shipped, was kept here and drifted: the site's title, summary, pane path, technology, status and
+before the row shipped, was kept here and drifted: the site's summary, pane path, technology, status and
 capabilities all ended up different from it. When this block and the website disagree, the website is right.
 
 ```js
