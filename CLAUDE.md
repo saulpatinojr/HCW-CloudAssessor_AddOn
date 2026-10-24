@@ -4,8 +4,11 @@ This is `saulpatinojr/HCW-CloudAssessor_AddOn`, the **lab edition** of the Cloud
 site route `/tools/cloud-assessment`, origin `https://cloud-assessment.lab.hybridcloudworks.com`): a Python 3.14 FastAPI
 application that assesses an uploaded Azure Resource Graph export against a declarative criteria catalog, a vanilla pane
 the website frames, fictional samples, docs, a hardened Dockerfile and SHA-pinned workflows. The engine
-(`packages/cloud-assessor-core`) is **seeded here and moves upstream** to `saulpatinojr/HCW-CloudAssessor_App` unchanged
-(ADR-0001); until the App adopts it, it is edited here, with that move in mind (pydantic only, no HTTP, no cloud SDK).
+is **owned upstream** by `saulpatinojr/HCW-CloudAssessor_App`: it was seeded here (ADR-0001), the App adopted it unchanged
+and has released it as `v0.2.0` and `v0.2.1` (wheel assets). The copy under `packages/cloud-assessor-core` is the
+original `0.1.0` seed, now two releases behind and **not to be edited**; engine and catalog changes go upstream first and
+arrive here as a release wheel (`core-update.yml`, inert until a `CORE_REF` line exists). Adopting `v0.2.1` is still to do.
+**Read `docs/whats-new-upstream.md` before changing behaviour here, and update it when you adopt an upstream change.**
 
 - Run `uv sync --all-packages`, then `uv run ruff check . && uv run ruff format --check .`,
   `uv run python scripts/check-catalog.py` and `uv run pytest -q --cov=packages --cov=src` before claiming anything

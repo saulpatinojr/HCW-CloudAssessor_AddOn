@@ -9,7 +9,7 @@ with evidence and a counter-proposal. Never treat a stale-head check as current 
 
 `saulpatinojr/HCW-CloudAssessor_AddOn` is the **lab edition** of the Cloud Assessor: a Python 3.14 FastAPI application
 (`src/cloud_assessment_lab`) that assesses an uploaded Azure Resource Graph export against a declarative criteria
-catalog, plus the engine seed (`packages/cloud-assessor-core`, destined for `HCW-CloudAssessor_App`), a vanilla pane
+catalog, plus the original engine seed (`packages/cloud-assessor-core`; the engine is now owned and released by `HCW-CloudAssessor_App`, see `docs/whats-new-upstream.md`), a vanilla pane
 (`web/`), fictional samples, docs, a hardened Dockerfile and SHA-pinned workflows.
 
 Review against `CLAUDE.md`'s invariants. In particular: the lab must stay technically unable to reach Azure (no cloud

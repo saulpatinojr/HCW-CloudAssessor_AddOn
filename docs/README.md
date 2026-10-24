@@ -1,11 +1,12 @@
 # Documentation index
 
-This repository documents the lab edition and the engine seed. The canonical ADR log for the pair will live upstream in
+This repository documents the lab edition and the original engine seed (the engine itself is now owned upstream). The canonical ADR log for the pair will live upstream in
 `HCW-CloudAssessor_App` once its wiki `Decision-Log` exists (its `REFACTOR_APP.md` section 15); until then this edition's
 own ADRs and the copies it depends on are under `adr/`.
 
 | Document | Purpose |
 |---|---|
+| [`whats-new-upstream.md`](whats-new-upstream.md) | **Read first.** What the App (`HCW-CloudAssessor_App`) released and changed that reaches this edition, what is not yet adopted here, and the steps to adopt it. Kept current by whoever adopts an upstream change. |
 | [`website-integration/integration-guide.md`](website-integration/integration-guide.md) | How hybridcloudworks.com shows this AddOn: catalogue row, origin, status proxy, pane protocol, sandbox (incl. the `downloads` capability request), environment table, copy rules, acceptance tests |
 | [`website-integration/routes.md`](website-integration/routes.md) | The one site route `/tools/cloud-assessment`, pre-render and route-inventory entries |
 | [`api/openapi.yaml`](api/openapi.yaml) | The lab API contract (`tests/contract` keeps it aligned with the implementation two-way) |
