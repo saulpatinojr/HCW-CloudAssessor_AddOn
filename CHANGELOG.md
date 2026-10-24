@@ -9,6 +9,13 @@ All notable changes to this repository are recorded here. The format follows Kee
 - `docs/whats-new-upstream.md`: a running note of what the App released and changed that reaches this edition (current upstream state, the two releases not yet adopted, the compatibility trial, the adoption steps, and open upstream decisions). `CLAUDE.md` and `docs/README.md` point to it.
 
 ### Changed
+- `docs/website-integration/integration-guide.md` now follows the website's real catalogue row. The row pasted into it was
+  written before the row shipped and had drifted: 5 of its 10 fields differed from the website's (summary, pane path,
+  technology, status and capabilities, plus the `comingSince` and `comingReason` fields). The block is now a copy of the
+  website's current row, with the website commit it came from, and says the website is the authority. The guide also
+  says that the site frames `origin + panePath` with no `?theme=` parameter (the pane still honours one), and that the
+  site grants `navigate` and `downloads` where this AddOn asked for `downloads` and `clipboard`; the owner confirms
+  whether that is intended. Compared field by field with a script on 2026-10-24: 0 of 10 now differ.
 - **Documents say who owns the engine.** `CLAUDE.md`, `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, the pull request template and `.github/copilot-instructions.md` still said the engine is "seeded here and moves upstream" and "edited here until the App adopts it". The App adopted it (its "Engine adopted" entry) and has released it as `v0.2.0` and `v0.2.1`, so they now say the App owns it and the seed here is not edited until it is replaced by the release wheel. `ADR-0001` is left as written (a historical record). Documents only; no code, test or dependency changed.
 - Dependency updates pass CI as Dependabot opens them. Its `pip` updater rewrote `pyproject.toml` and the committed
   `requirements.lock.txt` but never `uv.lock`, so every one of its pull requests failed the export check (#12 to #15).
