@@ -9,6 +9,7 @@ All notable changes to this repository are recorded here. The format follows Kee
 - `docs/whats-new-upstream.md`: a running note of what the App released and changed that reaches this edition (current upstream state, the two releases not yet adopted, the compatibility trial, the adoption steps, and open upstream decisions). `CLAUDE.md` and `docs/README.md` point to it.
 
 ### Changed
+- `docs/website-integration/integration-guide.md` follows the website after hybridcloudworks.com#1359 (issues #1353 and #1354, owner decisions of 2026-10-24): the row now holds `downloads` and `clipboard-write` (it held `navigate` and `downloads`), the frame address carries `?theme=dark|light` read once from the site's theme, the clipboard grant is write only, and the row copy is taken from website commit b0cf0055.
 - `docs/website-integration/integration-guide.md` now follows the website's real catalogue row. The row pasted into it was
   written before the row shipped and had drifted: 5 of its 10 fields differed from the website's (summary, pane path,
   technology, status and capabilities, plus the `comingSince` and `comingReason` fields). The block is now a copy of the
