@@ -7,7 +7,7 @@
 [![publish-images](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/publish-images.yml/badge.svg)](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/publish-images.yml)
 [![core-update](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/core-update.yml/badge.svg)](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/core-update.yml)
 [![python](https://img.shields.io/badge/python-3.14.6%2B-3776AB?logo=python&logoColor=white)](.python-version)
-[![image](https://img.shields.io/badge/docker.io-hybridcloudworks%2Fhcw--addon--cloud--assessment-2496ED?logo=docker&logoColor=white)](docs/deployment/lab-host.md)
+[![image](https://img.shields.io/badge/docker.io-hybridcloudworks%2Fhcw--cloudassessor-2496ED?logo=docker&logoColor=white)](docs/deployment/lab-host.md)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Upload the JSON that `az graph query` prints, or the CSV that Resource Graph Explorer downloads, and get a scorecard per

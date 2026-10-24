@@ -4,7 +4,7 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased] — 0.1.0
 
-- The lab image repository on Docker Hub is renamed from `hybridcloudworks/hcw-addon-cloud-assessment` to `hybridcloudworks/hcw-cloudassessor` (owner naming convention, 2026-10-24). `publish-images.yml` (`IMAGE`, the image title label), the local `:dev` build tag, the README and the deployment and integration documents follow. The container name on the lab host (`hcw-addon-cloud-assessment`) is **not** changed: the website's host role owns it. Nothing is published by this change; the next `v*` tag pushes to the new name once the Docker OIDC connection allows it (`docs/deployment/lab-host.md`, step 2).
+- The lab image repository on Docker Hub is renamed from `hybridcloudworks/hcw-addon-cloud-assessment` to `hybridcloudworks/hcw-cloudassessor` (owner naming convention, 2026-10-24). `publish-images.yml` (`IMAGE`, the image title label), the local `:dev` build tag, the README and the deployment and integration documents follow. The container name on the lab host (`hcw-addon-cloud-assessment`) is **not** changed: the website's host role owns it. Nothing is published by this change; the next `v*` tag pushes to the new name once the Docker OIDC connection allows it (`docs/deployment/lab-host.md`, step 4).
 
 ### Added
 - `.github/dependabot.yml` groups `pydantic` and `pydantic-core` so they arrive in one pull request. pydantic requires one exact `pydantic-core`, so a `pydantic-core` bump on its own cannot resolve; the same failure closed the App repository's Dependabot pull requests.
