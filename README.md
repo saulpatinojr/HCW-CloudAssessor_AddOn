@@ -36,7 +36,7 @@ flowchart LR
     Pane["web/<br/>vanilla pane, HCW theme tokens"]
     Core --> Lab --> Pane
   end
-  Image["docker.io/hybridcloudworks/hcw-addon-cloud-assessment<br/>scanned, by digest"]
+  Image["docker.io/hybridcloudworks/hcw-cloudassessor<br/>scanned, by digest"]
   Host["lab host<br/>cloud-assessment.lab.hybridcloudworks.com (port 18083, loopback)"]
   Site["hybridcloudworks.com<br/>/tools/cloud-assessment (sandboxed pane)"]
   Lab -- "publish-images.yml on v* tags" --> Image
@@ -110,7 +110,7 @@ answer `503 turnstile_not_configured` (fail closed). Browser suite: `make e2e` (
 ## Releases and artifacts
 
 A `v*` tag builds the image, proves the edition boundary inside it, scans it (Trivy, HIGH/CRITICAL, fixed only), pushes
-`docker.io/hybridcloudworks/hcw-addon-cloud-assessment:<version>` with provenance and SBOM, attests it, and prints the
+`docker.io/hybridcloudworks/hcw-cloudassessor:<version>` with provenance and SBOM, attests it, and prints the
 digest in the run summary. The website pins that digest in its lab-host `group_vars`; the digest is the only coupling.
 The push is skipped until the owner enables the Docker OIDC connection (`docs/deployment/lab-host.md`).
 
