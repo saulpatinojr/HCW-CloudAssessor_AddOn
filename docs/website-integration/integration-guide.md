@@ -16,7 +16,7 @@ one page; nothing from this repository is installed into the site bundle.
 | Function App setting (status proxy) | `ADDON_CLOUD_ASSESSMENT_URL` = the origin, plain app setting (public value) |
 | Lab-host vault key | `vault_addon_cloud_assessment_turnstile_secret` |
 | Lab-host loopback port | 18083 |
-| Image | `docker.io/hybridcloudworks/hcw-cloudassessor`, pinned by digest in the website's `lab-host/ansible/group_vars/all.yml` `addons[]` |
+| Image | `docker.io/hybridcloudworks/img-ca-lab-addon`, pinned by digest in the website's `lab-host/ansible/group_vars/all.yml` `addons[]` |
 
 ## Catalogue row (`frontend/src/data/addons/catalogue.js`)
 

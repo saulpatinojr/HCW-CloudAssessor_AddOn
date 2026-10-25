@@ -10,8 +10,8 @@ as one `docker_container` named `hcw-addon-cloud-assessment` behind the host's C
 | Field | Value |
 |---|---|
 | `id` | `cloud-assessment` |
-| `image` | `docker.io/hybridcloudworks/hcw-cloudassessor` |
-| `image_tag` | the release tag, for humans (for example `0.1.0`) |
+| `image` | `docker.io/hybridcloudworks/img-ca-lab-addon` |
+| `image_tag` | the release tag, for humans (for example `v0.1.0`) |
 | `image_digest` | the `sha256:…` printed by `publish-images.yml` in its run summary; the only coupling |
 | `port` | `18083` (published as `127.0.0.1:18083:8080`; the role asserts loopback and uniqueness) |
 | `memory` | `512m` |
