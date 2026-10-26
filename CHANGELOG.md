@@ -40,6 +40,13 @@ All notable changes to this repository are recorded here. The format follows Kee
   `base-follows-website` job, which runs on `main` and weekly only, had been red on `main` since its first run after
   that (2026-10-23). An image built from the next tag uses the current base; a tag already published keeps the base
   it was built on.
+- The lab image states its open-source licence in the form registries and scanners read.
+  `infrastructure/docker/Dockerfile` sets `org.opencontainers.image.licenses="MIT"` on the final stage (the SPDX id
+  of `LICENSE`, the MIT License). The `image` job in `ci.yml` fails when the built image lacks the label or `LICENSE`
+  stops being MIT, and the pre-publish check in `publish-images.yml` fails when the image about to be pushed lacks it.
+  The `labels:` input of `publish-images.yml` must not set this label: it would override the Dockerfile's. The image
+  tags on Docker Hub on 2026-10-26 (`0.1.0`, `v0.1.0` and `v0.1.1-rc.1`) were built without the
+  label and are not changed; the label reaches Docker Hub with the next tagged release.
 - Repository hygiene: `.github/dependabot.yml` groups GitHub Actions updates under `all-actions` and removes the unused `/tests/e2e` npm entry; `tests/unit/test_config.py` and `tests/unit/test_edition.py` use `as_posix()`, `os.pathsep`, and `SYSTEMROOT` forwarding for cross-platform Windows/Linux test parity.
 - `core-update.yml`'s checkout no longer persists credentials: two Authorization headers made GitHub answer `400` to `create-pull-request`'s push (reproduced twice in the Migrate App's `rules-refresh`, fixed there in saulpatinojr/HCW-AzMigrateOrchestrator_App#24).
 - README: a "where to try it" paragraph for new visitors; the relationship diagram and text say the App now holds the engine and the seed here is deleted at its first release.
