@@ -47,6 +47,19 @@ All notable changes to this repository are recorded here. The format follows Kee
   The `labels:` input of `publish-images.yml` must not set this label: it would override the Dockerfile's. The image
   tags on Docker Hub on 2026-10-26 (`0.1.0`, `v0.1.0` and `v0.1.1-rc.1`) were built without the
   label and are not changed; the label reaches Docker Hub with the next tagged release.
+- The base image now follows the website without anyone remembering to: `.github/workflows/base-update.yml` runs once a
+  day, compares `infrastructure/docker/versions.env` with the website's `lab-image/versions.env` (read at one recorded
+  commit) and, when they differ, opens one pull request that moves `versions.env` and every external `FROM` together
+  (`scripts/follow_website_base.py`, tested in `tests/unit/test_follow_website_base.py`). Before opening it, the run
+  checks that the new digest is an index in the registry with every platform the old one had. The script refuses, for a
+  person to decide, a different image repository, a different Python minor line and a Dockerfile it cannot move
+  completely. The pull request is opened by the HCW Portfolio Admin GitHub App from the `admin-ops` environment, so
+  this repository's required checks run on it; that needs the App to be installed on this repository, which it was
+  not on 2026-10-26 (the token step of `core-update.yml` fails the same way), so until it is the run fails at that step
+  and the pin still has to be moved by hand. `tests/security/test_base_update_workflow.py` pins the token handling
+  down. Nothing is merged automatically. Background: the website bumped its pin on 2026-10-21 and this repository's
+  `base-follows-website` check then sat red on `main` until a person fixed it by hand
+  (saulpatinojr/HCW-HybridCloudWorks#1386). That job stays as the second line of defence.
 - Repository hygiene: `.github/dependabot.yml` groups GitHub Actions updates under `all-actions` and removes the unused `/tests/e2e` npm entry; `tests/unit/test_config.py` and `tests/unit/test_edition.py` use `as_posix()`, `os.pathsep`, and `SYSTEMROOT` forwarding for cross-platform Windows/Linux test parity.
 - `core-update.yml`'s checkout no longer persists credentials: two Authorization headers made GitHub answer `400` to `create-pull-request`'s push (reproduced twice in the Migrate App's `rules-refresh`, fixed there in saulpatinojr/HCW-AzMigrateOrchestrator_App#24).
 - README: a "where to try it" paragraph for new visitors; the relationship diagram and text say the App now holds the engine and the seed here is deleted at its first release.

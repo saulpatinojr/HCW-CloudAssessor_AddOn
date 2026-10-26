@@ -3,7 +3,7 @@
 | Path | What |
 |---|---|
 | `docker/Dockerfile` | The lab image (`docker.io/hybridcloudworks/img-ca-lab-addon`): two stages on one digest-pinned base, hash-pinned dependencies, no pip at runtime, uid 10001, `HEALTHCHECK`, `CMD python -m cloud_assessment_lab`. `ARG EDITION=lab` is asserted in both stages. |
-| `docker/versions.env` | `BASE_IMAGE`, `BASE_DIGEST`, `BASE_PYTHON_VERSION`; CI fails when any `FROM` differs from `BASE_IMAGE@BASE_DIGEST`. |
+| `docker/versions.env` | `BASE_IMAGE`, `BASE_DIGEST`, `BASE_PYTHON_VERSION`; CI fails when any `FROM` differs from `BASE_IMAGE@BASE_DIGEST`. It follows the website's pin: `.github/workflows/base-update.yml` opens the pull request that moves it and every `FROM` when the website's pin moves. |
 | `../docker-compose.yml` | Local development only, hardened like the lab host's `docker_container` (read-only root, tmpfs `/tmp`, `cap_drop ALL`, `no-new-privileges`, 512m, 256 pids, one CPU). |
 
 There is no Terraform here and there must not be (AddOn Integration Standard, section 3): the lab host belongs to the

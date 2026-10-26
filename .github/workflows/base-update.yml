@@ -1,0 +1,154 @@
+# Actions are pinned to full commit SHAs (version in the trailing comment); Dependabot (github-actions ecosystem) proposes updates.
+# The base image follows the website (CONTRACT-DECISIONS item 20): infrastructure/docker/versions.env and every external
+# FROM in infrastructure/docker/Dockerfile move to the website's lab-image/versions.env together. The website moves its own
+# pin by itself (its weekly lab-supply-chain run). Nothing moved this repository's copy, so the base-follows-website job in
+# security.yml went red on main and stayed red until a person noticed (saulpatinojr/HCW-HybridCloudWorks#1386). This
+# workflow closes that gap: once a day it compares the two and, when they differ, opens one pull request that moves them
+# together. scripts/follow_website_base.py does the editing (tests/unit/test_follow_website_base.py covers it).
+#
+# Two jobs. `plan` holds no credential and no environment: it reads the website's file at one recorded commit, runs the
+# script in check mode and, when the pin moved, confirms in the registry that the new digest is an index with every
+# platform the old one had (when the registry can still show the old one). When the two already agree the run ends
+# there. `open-pr` runs only when something has to move, in the admin-ops environment, and applies the same move to the
+# same website commit before opening the pull request. The script refuses, for a person to decide, a different image
+# repository, a different Python minor line, and a Dockerfile it cannot move completely; the run is then red and nothing is
+# opened. Nothing is merged automatically and no file but versions.env and the Dockerfile is touched.
+#
+# The pull request is opened with a short-lived GitHub App token (actions/create-github-app-token), as core-update.yml is
+# meant to, not with GITHUB_TOKEN: a pull request opened with GITHUB_TOKEN starts no workflow, so the required checks of
+# the "Protect main" ruleset would never run on it and it could never merge. The credential is the HCW Portfolio Admin
+# App: its client ID is the variable APP_CLIENT_ID and its private key the secret APP_PRIVATE_KEY of the admin-ops
+# environment (limited to main). PREREQUISITE, not yet met when this was written: the App must be installed on this
+# repository; until it is, the token step fails with "Not Found" (the same failure core-update.yml's probe run shows).
+# The one branch, base-update/website-base, is reused: a second website move before the first pull request merges
+# updates that pull request instead of opening another.
+name: base-update
+on:
+  schedule: [{ cron: "37 7 * * *" }]
+  workflow_dispatch:
+permissions: {}
+concurrency: { group: base-update, cancel-in-progress: false }
+jobs:
+  plan:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.plan.outputs.changed }}
+      old: ${{ steps.plan.outputs.old }}
+      new: ${{ steps.plan.outputs.new }}
+      short: ${{ steps.plan.outputs.short }}
+      python: ${{ steps.plan.outputs.python }}
+      old_python: ${{ steps.plan.outputs.old_python }}
+      website_sha: ${{ steps.website.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false }
+      - id: website
+        name: Read the website's current pin at one recorded commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha="$(gh api repos/saulpatinojr/HCW-HybridCloudWorks/commits/main --jq .sha)"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::could not read the website's main commit"; exit 1; }
+          curl --proto '=https' --proto-redir '=https' --tlsv1.2 -fsSL --retry 3 --max-time 30 --max-filesize 1048576 \
+            "https://raw.githubusercontent.com/saulpatinojr/HCW-HybridCloudWorks/${sha}/lab-image/versions.env" \
+            -o "${RUNNER_TEMP}/website-versions.env"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+      - id: plan
+        name: Compare this repository's base image with the website's pin (writes nothing)
+        run: python3 -I scripts/follow_website_base.py --website-env "${RUNNER_TEMP}/website-versions.env" --check
+      - if: steps.plan.outputs.changed == 'true'
+        name: The website's digest is a real index with every platform the old digest had
+        env:
+          OLD_REF: ${{ steps.plan.outputs.old }}
+          NEW_REF: ${{ steps.plan.outputs.new }}
+        run: |
+          set -euo pipefail
+          platforms() { docker buildx imagetools inspect "$1" | sed -n 's/^[[:space:]]*Platform:[[:space:]]*//p' | { grep -v '^unknown/unknown$' || true; } | sort -u; }
+          new="$(platforms "$NEW_REF")"
+          printf '%s\n' "$new" | grep -qx 'linux/amd64' || { echo "::error::${NEW_REF} is not an index the registry shows with linux/amd64"; exit 1; }
+          old="$(platforms "$OLD_REF" || true)"
+          if [ -z "$old" ]; then
+            echo "::warning::the registry could not show the platforms of ${OLD_REF}; only checked that the new digest has linux/amd64"
+          else
+            missing="$(comm -13 <(printf '%s\n' "$new") <(printf '%s\n' "$old"))"
+            if [ -n "$missing" ]; then
+              echo "::error::${NEW_REF} lacks platforms that ${OLD_REF} has: $(printf '%s' "$missing" | tr '\n' ' ')"
+              exit 1
+            fi
+          fi
+          echo "platforms of the new digest:"; printf '%s\n' "$new"
+  open-pr:
+    needs: plan
+    if: needs.plan.outputs.changed == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    environment: admin-ops
+    steps:
+      # persist-credentials: false - create-pull-request sets its own Authorization header for the push; with the
+      # checkout's persisted header beside it, git sends two and GitHub answers 400 (seen in the Migrate App's rules-refresh).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false }
+      - name: Apply the move (the same website commit the plan read)
+        env:
+          WEBSITE_SHA: ${{ needs.plan.outputs.website_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$WEBSITE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::the plan did not record a website commit"; exit 1; }
+          curl --proto '=https' --proto-redir '=https' --tlsv1.2 -fsSL --retry 3 --max-time 30 --max-filesize 1048576 \
+            "https://raw.githubusercontent.com/saulpatinojr/HCW-HybridCloudWorks/${WEBSITE_SHA}/lab-image/versions.env" \
+            -o "${RUNNER_TEMP}/website-versions.env"
+          python3 -I scripts/follow_website_base.py --website-env "${RUNNER_TEMP}/website-versions.env"
+      - id: app-token
+        name: GitHub App token (this repository only; Contents and Pull requests write)
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Open the pull request (ready for review)
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          branch: base-update/website-base
+          author: "${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>"
+          committer: "${{ steps.app-token.outputs.app-slug }}[bot] <${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>"
+          title: "CI: the base image follows the website's current digest (${{ needs.plan.outputs.short }})"
+          commit-message: "CI: the base image follows the website's current digest (${{ needs.plan.outputs.short }})"
+          add-paths: |
+            infrastructure/docker/versions.env
+            infrastructure/docker/Dockerfile
+          body: |
+            ## Summary
+
+            The website's base image pin moved and this repository's copy did not.
+
+            - Was: `${{ needs.plan.outputs.old }}` (Python ${{ needs.plan.outputs.old_python }})
+            - Now: `${{ needs.plan.outputs.new }}` (Python ${{ needs.plan.outputs.python }})
+            - Read from the website at commit [`${{ needs.plan.outputs.website_sha }}`](https://github.com/saulpatinojr/HCW-HybridCloudWorks/blob/${{ needs.plan.outputs.website_sha }}/lab-image/versions.env)
+
+            `infrastructure/docker/versions.env` and every external `FROM` in `infrastructure/docker/Dockerfile` moved together, which is what the `lint` job in `ci.yml` and the `base-follows-website` job in `security.yml` check. Nothing else changed.
+
+            ## Related issue or decision
+
+            Refs saulpatinojr/HCW-HybridCloudWorks#1386 (why this pull request exists). No closing keyword on purpose.
+
+            ## Verification
+
+            - [x] The run read the website's file at the commit above, checked each value against a strict pattern, and changed only the two files.
+            - [x] The new digest is an index in the registry with every platform the old one had (the `plan` job's log lists them).
+            - [ ] This repository's CI builds the image on this pull request: read its result before merging.
+            - [ ] After the merge, `base-follows-website` in `security.yml` must be green on `main`.
+
+            ## Infrastructure
+
+            - [x] `versions.env` and every `FROM` agree.
+            - Nothing is published by this change: an image built from the next tag uses the new base. Rollback: revert this pull request.
+
+            Opened by `.github/workflows/base-update.yml`: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. It is reused for later website moves, so a newer move updates this pull request instead of opening another.
