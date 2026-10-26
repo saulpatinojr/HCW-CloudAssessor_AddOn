@@ -34,6 +34,11 @@ All notable changes to this repository are recorded here. The format follows Kee
   digest, and a weekly job flags the base drifting from the website's pin.
 - Base image `python:3.14.8-slim-trixie` by digest, the website's current pin (CONTRACT-DECISIONS item 20). There is
   no docker Dependabot entry: the base follows the website, and the uv image follows `UV_VERSION`.
+- The base image digest follows the website's current pin again (`python:3.14.8-slim-trixie@sha256:fbecd461...`, same
+  tag, newer build; `versions.env` and both `FROM` lines). The website rebuilt on it on 2026-10-21; `security.yml`'s
+  `base-follows-website` job, which runs on `main` and weekly only, had been red on `main` since its first run after
+  that (2026-10-23). An image built from the next tag uses the current base; a tag already published keeps the base
+  it was built on.
 - Repository hygiene: `.github/dependabot.yml` groups GitHub Actions updates under `all-actions` and removes the unused `/tests/e2e` npm entry; `tests/unit/test_config.py` and `tests/unit/test_edition.py` use `as_posix()`, `os.pathsep`, and `SYSTEMROOT` forwarding for cross-platform Windows/Linux test parity.
 - `core-update.yml`'s checkout no longer persists credentials: two Authorization headers made GitHub answer `400` to `create-pull-request`'s push (reproduced twice in the Migrate App's `rules-refresh`, fixed there in saulpatinojr/HCW-AzMigrateOrchestrator_App#24).
 - README: a "where to try it" paragraph for new visitors; the relationship diagram and text say the App now holds the engine and the seed here is deleted at its first release.
