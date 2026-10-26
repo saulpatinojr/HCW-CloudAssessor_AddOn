@@ -77,9 +77,10 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   a real bump pull request here. To prove the credential while the workflow is inert:
   `gh workflow run core-update.yml -R saulpatinojr/HCW-CloudAssessor_AddOn --ref main -f probe=true`.
   The App key lives only as the repository secret `HCW_MAIN_ADMIN_PRIVATE_KEY` and is never printed. To rotate it,
-  generate a new private key on the settings page of the App (https://github.com/settings/apps), replace the secret
-  on this repository's secrets page
-  (https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/settings/secrets/actions), then delete the old key on the
-  settings page of the App.
+  generate a new private key on the settings page of the App (https://github.com/settings/apps), replace the secret in every repository that holds the key (this one:
+  https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/settings/secrets/actions; the App is installed on the four
+  add-on repositories, so check the other three), then delete the old key on the settings page of the App.
+  The settings page can hold several keys, so a separate key per repository lets you revoke one without
+  touching the others.
 - Auto-merge of a compatible bump needs the repository setting "Allow auto-merge", which was off on 2026-10-26 (UTC) and has since been turned on.
   With it off, `core-update` warns and leaves the pull request for a person to merge.
