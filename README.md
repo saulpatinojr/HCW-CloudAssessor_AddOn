@@ -17,9 +17,9 @@ holds its owner token, and expires after two hours or when deleted. Every scorec
 export cannot show spend, budgets, role assignments, diagnostic settings, policy state, Defender plans or traffic, and the
 report says so in data (`unknown`), not only in prose. It is not an audit.
 
-**Where to try it.** The pane will appear at [hybridcloudworks.com/tools/cloud-assessment](https://hybridcloudworks.com/tools/cloud-assessment)
-once the first image is published; until then, run it on your own machine with the Quick start below and open
-`http://127.0.0.1:8080`. Either way there is no account and nothing to install in Azure: you export, you upload, you read.
+**Where to try it.** The pane is on the website at [hybridcloudworks.com/tools/cloud-assessment](https://hybridcloudworks.com/tools/cloud-assessment);
+you can also run it on your own machine with the Quick start below and open `http://127.0.0.1:8080`. Either way there is
+no account and nothing to install in Azure: you export, you upload, you read.
 
 > **Status:** lab edition, not production. Limitations are recorded in [`VALIDATION.md`](VALIDATION.md). Every criterion's
 > reference link is marked `[VERIFY]` until the owner confirms it; the attribution wording awaits owner review
@@ -112,7 +112,10 @@ answer `503 turnstile_not_configured` (fail closed). Browser suite: `make e2e` (
 A `v*` tag builds the image, proves the edition boundary inside it, scans it (Trivy, HIGH/CRITICAL, fixed only), pushes
 `docker.io/hybridcloudworks/img-ca-lab-addon:v<version>` with provenance and SBOM, attests it, and prints the
 digest in the run summary. The website pins that digest in its lab-host `group_vars`; the digest is the only coupling.
-The push is skipped until the owner enables the Docker OIDC connection (`docs/deployment/lab-host.md`).
+The push is skipped unless the owner has enabled the Docker OIDC connection (`docs/deployment/lab-host.md`); `v0.1.0` and
+the release candidate `v0.1.1-rc.1` were pushed that way. What each version contains is in [`CHANGELOG.md`](CHANGELOG.md).
+Release `0.1.1` is the first image that states its licence (`org.opencontainers.image.licenses=MIT`); it is published by
+the tag `v0.1.1`, which is the owner's call and is not made by the pull request that prepares it.
 
 ## What the export cannot show
 

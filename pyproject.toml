@@ -1,6 +1,6 @@
 [project]
 name = "cloud-assessment-lab"
-version = "0.1.0"
+version = "0.1.1"
 description = "Hybrid Cloud Works Cloud Assessment, lab edition: assess an Azure Resource Graph export against paraphrased FinOps, Well-Architected cost and Zero Trust criteria, in memory, with no cloud connectivity by design."
 readme = "README.md"
 license = "MIT"

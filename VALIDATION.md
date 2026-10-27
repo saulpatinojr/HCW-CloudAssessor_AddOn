@@ -3,6 +3,28 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-10-27 (release 0.1.1 prepared)
+
+Toolchain: Python 3.14.6 (`.python-version`), uv 0.12.0 locally (CI uses uv 0.11.32, which was not run here), environment from
+`uv sync --frozen --all-packages`, on a Windows 11 workstation. This run prepares the version bump only: nothing in `src/`,
+`web/`, `samples/` or `docs/api/` changed since `v0.1.0` (`git diff v0.1.0 origin/main` over them is empty). No image was built
+and no workflow was run for it.
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| The lab application's version in every place that states it: `pyproject.toml`, `uv.lock` (the `cloud-assessment-lab` entry only), `__version__`, `repository.manifest.json` and the two sample lines in `docs/operations/runbook.md` | yes | all `0.1.1`. `uv lock` also rewrote the `revision = 5` line of `uv.lock` to `3`; that line was put back by hand so the lock file differs in one line. The engine seed (`packages/cloud-assessor-core`, its `__version__`, its tests, and the `cloud-assessor-core` entry in `uv.lock`) stays `0.1.0` on purpose |
+| `docs/api/openapi.yaml`, `info.version` | decided, not changed | stays `0.1.0`. The OpenAPI Specification defines that field as the version of the API document, "distinct from the OpenAPI Specification version or the API implementation version" ([Info Object](https://spec.openapis.org/oas/v3.1.0#info-object)); the document is unchanged since `v0.1.0`; no test ties it to `__version__`; the Migrate AddOn keeps API document `0.3.0` beside release `0.3.2` |
+| `uv lock --check` | yes | exit 0 |
+| `uv run ruff check .` and `uv run ruff format --check .` | yes | clean (88 files) |
+| `uv run pytest -q --cov=packages --cov=src --cov-fail-under=85` | yes | 336 passed, coverage 98.12% (gate 85) |
+| `/api/health` and `X-Addon-Version` read `__version__` | yes | `tests/unit/test_api.py` asserts both equal `__version__`; `tests/end_to_end/test_repository_manifest.py` holds `__version__` to `pyproject.toml` and `repository.manifest.json`; a request to the app in the same process printed health `0.1.1` and header `0.1.1` |
+| `uv run python scripts/check-catalog.py`, and its `--doc` output against `docs/rules/catalog.md` | yes | catalog 1.0.0, 25 criteria, 25 links marked `[VERIFY]`; no drift |
+| The website's `scripts/addons/check-guide-drift.mjs` (the script `guide-drift.yml` runs), on this branch's guide and the website's `main` data | yes, locally | "in step: 13 fields compared". The guide is not touched by this change |
+| Docker image build, the in-image boundary checks, Trivy, and the licence label on a built image | **no**, CI only | no image was built here; the `image` job of `ci.yml` builds one and checks the label on the pull request |
+| `publish-images.yml` dry run on `main` | **no** | not part of this change. This repository's gate step does not check for a `v*` tag (the Cloud Crawler's does, since its [pull request 18](https://github.com/saulpatinojr/HCW-CloudCrawler_AddOn/pull/18), which says a manual run there reached the Docker login and failed because the connection trusts tags only). What a manual run does here has not been observed |
+| Push, provenance, SBOM, attestation and digest of `v0.1.1`; the label on the Docker Hub tag | **no** | only the tag `v0.1.1` publishes, and it is the owner's call ([issue 47](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/issues/47)) |
+| The live lab host | **no** | the status route still reported version `0.1.0` on 2026-10-27, as expected until the website pins a new digest |
+
 ## Upstream adoption trial 2026-10-24 (nothing in this repository changed)
 
 Question: would the App's engine `0.2.1` (release `v0.2.1`) work in this edition? Method: a throwaway copy of this repository with `packages/cloud-assessor-core` replaced by the App's `packages/cloud-assessor-core` at `5a7ed0b` (engine `0.2.1`, catalog `1.1.0`), `uv sync --all-packages`, then `pytest` over `tests/unit`, `tests/security`, `tests/contract`, `tests/end_to_end` and the engine's own tests. Python 3.14.6, uv 0.11.32.
