@@ -43,8 +43,24 @@ is rebuilt from `main` and your commit is replaced. For a change that has to las
 change on your own branch. If the website moves back (or someone moves `main` to the website's pin by hand) while a pull
 request is open, the next run closes it as no longer needed.
 
-**When the run is red.** Open the run and read the line that starts with `::error::`. Nothing was changed and no pull
-request was opened by that run, and the weekly `base-follows-website` job stays red until the cause is dealt with.
+**When the run is red.** Open the run and read the line that starts with `::error::`. The weekly `base-follows-website`
+job stays red until the cause is dealt with. What the run left behind depends on where it stopped:
+
+- If the red step is in the first job, `plan`, or is the step called "Apply the move" in the second, nothing was pushed and
+  no pull request was opened: those steps only read and edit files on the runner.
+- If the red step is a later step of the second job (the token, the commit identity or "Open the pull request"), the branch
+  `base-update/website-base` may already have been pushed without its pull request. Look before you act. Success: the first
+  command lists the pull requests of that branch (open or closed; nothing is fine), and the second prints
+  `refs/heads/base-update/website-base` when the branch exists. A branch without a pull request does no harm: the next
+  successful run reuses it and opens the pull request.
+
+  ```powershell
+  gh pr list -R saulpatinojr/HCW-CloudAssessor_AddOn --head base-update/website-base --state all
+  ```
+
+  ```powershell
+  gh api "repos/saulpatinojr/HCW-CloudAssessor_AddOn/git/matching-refs/heads/base-update/website-base" --jq ".[].ref"
+  ```
 
 | The `::error::` line says | What it means | What to do |
 |---|---|---|
@@ -54,6 +70,21 @@ request was opened by that run, and the weekly `base-follows-website` job stays 
 | `expected exactly one BASE_... line`, `is not an image reference` or `is not sha256:` | A `versions.env` (the website's or this one) is malformed or repeats a key. | Read the file named in the message. If it is the website's file, tell the website's owner; do not edit this repository to match it. |
 | `the registry did not show ...` | The digest does not exist, or Docker Hub did not answer. | Run it again later: `gh workflow run base-update.yml --ref main`. If it keeps failing, the website's digest is wrong: tell the website's owner. |
 | `... lacks platforms that ... has` | The website's new digest dropped a platform the old one had (for example `linux/arm64`). | A decision for a person; do not merge anything until it is settled. |
+
+**If the daily run goes quiet.** GitHub switches off scheduled workflows in a public repository after 60 days without
+repository activity (a push, a merged pull request and the like count as activity). That would switch off `base-update` and
+the weekly `base-follows-website` job in `security.yml` together, so in that one case the weekly job is not an independent
+second check. To look, list the workflows and their state. Success: every row says `active`; a workflow GitHub has switched
+off says `disabled_inactivity`. To switch the two back on, run the second command (it does no harm to a workflow that is
+already on); success is that it prints a line saying the workflow was enabled.
+
+```powershell
+gh workflow list -R saulpatinojr/HCW-CloudAssessor_AddOn --all --json name,state,path | ConvertFrom-Json | Where-Object { $_.path -like ".github/workflows/*" } | Select-Object state, path | Format-Table -AutoSize
+```
+
+```powershell
+gh workflow enable base-update.yml -R saulpatinojr/HCW-CloudAssessor_AddOn; gh workflow enable security.yml -R saulpatinojr/HCW-CloudAssessor_AddOn
+```
 
 **Proving it (run this once after the workflow first reaches `main`, and again after any change to `base-update.yml`).** It
 uses a throwaway branch, so `main` is never touched. The commands are PowerShell. The previous digest used below is the one
@@ -70,14 +101,25 @@ this repository pinned before 2026-10-26 (`git log -p -- infrastructure/docker/v
    function Start-BaseUpdate { $before = gh run list -R $repo --workflow base-update.yml --branch proof/base-update --limit 1 --json databaseId --jq ".[0].databaseId"; gh workflow run base-update.yml -R $repo --ref proof/base-update; if ($LASTEXITCODE -ne 0) { Write-Host "the workflow could not be started (is base-update.yml on main yet?)"; return }; $global:run = $null; for ($i = 0; $i -lt 40 -and (-not $global:run -or $global:run -eq $before); $i++) { Start-Sleep -Seconds 3; $global:run = gh run list -R $repo --workflow base-update.yml --branch proof/base-update --limit 1 --json databaseId --jq ".[0].databaseId" }; if (-not $global:run -or $global:run -eq $before) { Write-Host "no new run appeared within two minutes"; return }; gh run watch $global:run -R $repo --exit-status }
    ```
 
-2. First make sure no real pull request from the workflow is open: the proof rewrites the branch `base-update/website-base`
-   and step 12 deletes it. Success: the first command prints nothing (or `no pull requests match`). If it lists a pull
-   request, stop. Then make a throwaway branch in its own folder. Success: the second command prints `HEAD is now at` and a
-   commit of `main`.
+2. First make sure the proof cannot meet a real update. It reuses the branch `base-update/website-base`, which a real update
+   (the website's pin differing from `main`'s) uses too, and step 11 puts the throwaway branch back to what `main` holds.
+   So the proof is only safe when `main` already has the website's pin. In that case the daily run at 07:37 UTC changes
+   nothing while the proof is going on (it also looks only at pull requests into `main`, and the proof's pull requests go
+   into the throwaway branch). Two checks. Success: the first command prints `same: the website and main hold the same pin`
+   and `lines read: 3 and 3`; the second prints nothing (or `no pull requests match`).
+   If the first says `DIFFERENT`, stop: a real update is due. Let the daily run open the real pull request (or start it with
+   `gh workflow run base-update.yml --ref main`), merge it, and begin again. If the second lists a pull request, stop: it
+   is a real one.
+
+   ```powershell
+   $a = gh api "repos/saulpatinojr/HCW-HybridCloudWorks/contents/lab-image/versions.env" -H "Accept: application/vnd.github.raw+json" | Where-Object { $_ -match "^BASE_" }; $b = gh api "repos/$repo/contents/infrastructure/docker/versions.env?ref=main" -H "Accept: application/vnd.github.raw+json" | Where-Object { $_ -match "^BASE_" }; if (-not $a -or ($a -join "|") -ne ($b -join "|")) { "DIFFERENT: stop and read the note under this step" } else { "same: the website and main hold the same pin" }; "lines read: $(@($a).Count) and $(@($b).Count)"
+   ```
 
    ```powershell
    gh pr list -R $repo --head base-update/website-base --state open
    ```
+
+   Then make a throwaway branch in its own folder. Success: the command prints `HEAD is now at` and a commit of `main`.
 
    ```powershell
    git -C $clone fetch origin; git -C $clone worktree add $wt -b proof/base-update origin/main
@@ -145,8 +187,8 @@ this repository pinned before 2026-10-26 (`git log -p -- infrastructure/docker/v
     git -C $wt fetch origin base-update/website-base; git -C $wt switch -c proof/person-fix origin/base-update/website-base; git -C $wt -c user.email=34853639+saulpatinojr@users.noreply.github.com -c user.name="Saul Patino" commit --allow-empty -m "proof: a fix a person pushed"; git -C $wt push origin HEAD:base-update/website-base; Start-BaseUpdate; gh run view $run -R $repo --log | Select-String "##\[notice\].*left alone"; gh run view $run -R $repo --json jobs --jq ".jobs[] | .name + ': ' + .conclusion"; git -C $wt fetch origin; git -C $wt log origin/base-update/website-base -1 --format=%s
     ```
 
-11. Check that a pull request that has become unnecessary is closed. Move the throwaway branch to the website's pin and run
-    again. Success: the run is green; a line shows `obsolete`; the job list shows `open-pr: success`; the last line prints
+11. Check that a pull request that has become unnecessary is closed. Move the throwaway branch to the website's pin (undoing
+    the commit of step 4 does that, because step 2 checked that `main` holds the website's pin) and run again. Success: the run is green; a line shows `obsolete`; the job list shows `open-pr: success`; the last line prints
     `CLOSED`. The workflow closes it by deleting the branch `base-update/website-base`. If the last line prints `OPEN` or
     `MERGED`, the proof has found a fault: record it and do not clean up before reading the `open-pr` log.
 
@@ -155,8 +197,15 @@ this repository pinned before 2026-10-26 (`git log -p -- infrastructure/docker/v
     ```
 
 12. Clean up. This deletes only what the proof made: the branch `base-update/website-base` (step 11 may already have deleted it,
-    and then the first command answers that the reference does not exist, which is fine), the throwaway branch and its
-    folder. Success: the last command prints nothing (or `no pull requests match`), so no pull request is left open.
+    and then the delete command answers that the reference does not exist, which is fine), the throwaway branch and its
+    folder. First check that the branch has not become a real one since step 2 (for example because the website moved while
+    you were working). Success: the first command prints nothing (or `no pull requests match`). If it lists a pull request
+    into `main`, stop and do not delete the branch: it is a real pull request, and the proof must be cleaned up by hand around
+    it. Success of the second command: it prints nothing (or `no pull requests match`), so no pull request is left open.
+
+    ```powershell
+    gh pr list -R $repo --head base-update/website-base --base main --state open
+    ```
 
     ```powershell
     gh api -X DELETE "repos/$repo/git/refs/heads/base-update/website-base"; git -C $clone push origin --delete proof/base-update; git -C $clone worktree remove --force $wt; git -C $clone branch -D proof/base-update proof/person-fix; gh pr list -R $repo --head base-update/website-base --state open

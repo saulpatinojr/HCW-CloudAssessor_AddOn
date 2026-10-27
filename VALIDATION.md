@@ -97,5 +97,7 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   (`<id>+<slug>[bot]@users.noreply.github.com`), the closing of an obsolete pull request (by `create-pull-request` deleting the branch, `delete-branch: true`), and the runner's own `python3` (the script is written
   for Python 3.9 and later and a test guards that, but the version on `ubuntu-26.04` was not looked up). The ruleset "Protect main" also sets
   "require extra approval for unattributed changes"; whether the pull request needs one extra approval is read from the first real pull
-  request. Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity; the weekly
-  `base-follows-website` job is the second check if that ever happens.
+  request. Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity. That switches off
+  `base-update` and the weekly `base-follows-website` job together, so after a quiet spell the weekly job is not an independent second
+  check. How to see whether either has been switched off, and how to switch them back on, is in `docs/operations/runbook.md`, "If the
+  daily run goes quiet".
