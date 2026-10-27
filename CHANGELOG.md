@@ -38,6 +38,9 @@ In short, since `v0.1.0`:
   no longer inject a command into the last step of the publish workflow ([pull request 38](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/38)).
 - The base image now follows the website's pin by itself: a daily workflow opens a pull request when the website moves,
   and a person still reviews and merges it ([pull request 49](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/49)).
+- A manual run of the publish workflow (`publish-images.yml`) is now a true dry run: it builds, checks and scans the image
+  but never pushes, because only a `v*` tag does. Before, a manual run on `main` went on to the Docker login
+  ([pull request 60](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/60)).
 - The engine-update workflow (`core-update.yml`) opens its pull request through the HCW Main Admin GitHub App, so this
   repository's required checks run on that pull request ([pull request 42](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/42)
   and [pull request 45](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/45)). It does nothing yet: the
