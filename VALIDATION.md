@@ -82,6 +82,18 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   add-on repositories, so check the other three), then delete the old key on the settings page of the App.
   The settings page can hold several keys, so a separate key per repository lets you revoke one without
   touching the others.
+  **Accepted risk, so nobody has to rediscover it.** A repository secret can be read by any workflow that runs from a branch
+  someone with write access can push, so `base-update.yml` is a second reader of the key beside `core-update.yml` (both can
+  be started by hand with `workflow_dispatch`), and the base-update proof depends on that: it runs the workflow from a
+  throwaway branch (it did, on 2026-10-27, and minted the token from that branch). Today only the owner can push here. The App
+  is installed on the four add-on repositories, and both workflows ask the token action for this repository only
+  (`repositories: ${{ github.repository }}`) with Contents and Pull requests write; a token lasts one hour. A modified workflow
+  on another branch could ask for more: the limit is then whatever the App was granted when it was installed (that list is on
+  the App's settings page, https://github.com/settings/apps, and is not repeated here because a session cannot read it), which
+  is why the key is a risk. The owner decided on 2026-10-26 to leave the key as a repository secret
+  ([HCW-HybridCloudWorks#1410](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1410)); the stronger options (an
+  environment limited to `main`, one key per repository) can be reopened if the key is ever suspected leaked. An environment
+  limited to `main` would also stop the base-update proof, which needs a run from a branch.
 - Auto-merge of a compatible bump needs the repository setting "Allow auto-merge", which was off on 2026-10-26 (UTC) and has since been turned on.
   With it off, `core-update` warns and leaves the pull request for a person to merge.
 - `base-update.yml` moves the base image pin to the website's pin by opening a pull request, with the same HCW Main Admin App credential as
@@ -114,5 +126,7 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   person's commit (only the "left alone" half was seen live); and the runner's own Python version (the script ran, so it is compatible, but the version
   was not read). Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity. That switches off
   `base-update` and the weekly `base-follows-website` job together, so after a quiet spell the weekly job is not an independent second
-  check. How to see whether either has been switched off, and how to switch them back on, is in `docs/operations/runbook.md`, "If the
-  daily run goes quiet".
+  check. It is also not a full second check at any time: it compares only the image and its digest, so if the website changes only
+  `BASE_PYTHON_VERSION` to another minor line, `base-update` refuses and goes red while the weekly job stays green. How to see whether
+  either has been switched off, and how to switch them back on, is in `docs/operations/runbook.md`, "If the daily run goes quiet";
+  failed `base-update` runs should be watched on their own ("When the run is red").
