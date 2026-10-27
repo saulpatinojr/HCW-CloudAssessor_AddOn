@@ -114,8 +114,9 @@ A `v*` tag builds the image, proves the edition boundary inside it, scans it (Tr
 digest in the run summary. The website pins that digest in its lab-host `group_vars`; the digest is the only coupling.
 The push is skipped unless the owner has enabled the Docker OIDC connection (`docs/deployment/lab-host.md`); `v0.1.0` and
 the release candidate `v0.1.1-rc.1` were pushed that way. What each version contains is in [`CHANGELOG.md`](CHANGELOG.md).
-Release `0.1.1` is the first image that states its licence (`org.opencontainers.image.licenses=MIT`); it is published by
-the tag `v0.1.1`, which is the owner's call and is not made by the pull request that prepares it.
+Release `0.1.1` is the first image that states its licence (`org.opencontainers.image.licenses=MIT`). It was published on
+2026-10-27 by the tag `v0.1.1`: digest `sha256:95082857e3b866743ffa5c827c7b897d085e945d80aa4b710f58926b03170456`,
+[release](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/releases/tag/v0.1.1), checks in `VALIDATION.md`.
 
 ## What the export cannot show
 
