@@ -2,10 +2,54 @@
 
 All notable changes to this repository are recorded here. The format follows Keep a Changelog; versions are semver tags.
 
-## [Unreleased] — 0.1.0
+## [Unreleased]
 
-- The lab image repository on Docker Hub is renamed from `hybridcloudworks/hcw-addon-cloud-assessment` to `hybridcloudworks/img-ca-lab-addon` (owner naming convention `img-<short name>-<job>-<type>`, 2026-10-25), and its tag is now the full release tag (`v0.1.0`, not `0.1.0`). `publish-images.yml` (`IMAGE`, the tag, the image title label), the local `:dev` build tag, the README and the deployment and integration documents follow. The container name on the lab host (`hcw-addon-cloud-assessment`) is **not** changed: the website's host role owns it. Nothing is published by this change; the next `v*` tag pushes to the new name once the Docker OIDC connection allows it (`docs/deployment/lab-host.md`, step 4).
-- Hardening: the last step of `publish-images.yml` printed the release version straight into a shell command (`echo "image_tag: ${{ steps.version.outputs.version }}"`). The version comes from the pushed tag's name, so a crafted tag name could inject a command. It now reaches the shell through the environment variable `IMAGE_TAG` and is printed as `"${IMAGE_TAG}"`. This was already present before the rename; only people with write access can push tags.
+## [0.1.1] - 2026-10-27
+
+This release exists so that the image on Docker Hub states its licence. The image
+`docker.io/hybridcloudworks/img-ca-lab-addon` now carries the label `org.opencontainers.image.licenses=MIT`. (A label is a
+small note stored inside an image. Registries and scanners read this one to learn which licence the software is under,
+and the ticket for this release notes that Docker's free open-source programme checks it.) The label has been in the
+Dockerfile since [pull request 44](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/44), but a label reaches
+Docker Hub only when a tag is pushed, and the newest tag so far, `v0.1.1-rc.1`, was built before the label was added
+([ticket 47](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/issues/47)). `v0.1.1` is the first tag that includes
+it.
+
+The application's own code did not change since `v0.1.0`: `src/`, the pane (`web/`), the API description
+(`docs/api/openapi.yaml`) and the samples are identical, and the engine seed (`packages/cloud-assessor-core`) differs only
+in one dependency range in its `pyproject.toml`. What changed is what the image is built from (a newer base image and
+four newer libraries) and the automation around it. Because the libraries are part of what runs, it is the test suite
+(`VALIDATION.md`, run 2026-10-27) and the in-image checks that CI and the publish run make that show behaviour is the same.
+
+The version moves from `0.1.0` to `0.1.1` in `pyproject.toml`, in `uv.lock` (the `cloud-assessment-lab` entry only), in
+`__version__` (`src/cloud_assessment_lab/__init__.py`) and in `repository.manifest.json`, so `/api/health` and the
+`X-Addon-Version` header say `0.1.1`. The engine seed keeps its own version, `0.1.0`, and `docs/api/openapi.yaml` keeps
+`info.version: 0.1.0`, because that field is the version of the API document and the API has not changed. Publishing the
+image is the tag `v0.1.1`, which is the owner's call and is not part of this change.
+
+In short, since `v0.1.0`:
+
+- The image states its licence, as above ([pull request 44](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/44)).
+- The image is built on Python 3.14.8 (it was 3.14.7) and four of its libraries are newer: FastAPI 0.143.0 to 0.162.0,
+  Starlette 1.7.0 to 1.9.0, pydantic 2.14.0 to 2.14.1 and pydantic-core 2.50.0 to 2.50.1 (pull requests
+  [17](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/17) and
+  [43](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/43), and the Dependabot updates in `git log v0.1.0..main`).
+- The Docker Hub repository is named `img-ca-lab-addon` (it was `hcw-addon-cloud-assessment`), and a crafted tag name can
+  no longer inject a command into the last step of the publish workflow ([pull request 38](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/38)).
+- The base image now follows the website's pin by itself: a daily workflow opens a pull request when the website moves,
+  and a person still reviews and merges it ([pull request 49](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/49)).
+- A manual run of the publish workflow (`publish-images.yml`) is now a true dry run: it builds, checks and scans the image
+  but never pushes, because only a `v*` tag does. Before, a manual run on `main` went on to the Docker login
+  ([pull request 60](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/60)).
+- The engine-update workflow (`core-update.yml`) opens its pull request through the HCW Main Admin GitHub App, so this
+  repository's required checks run on that pull request ([pull request 42](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/42)
+  and [pull request 45](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/45)). It does nothing yet: the
+  repository has not pinned an upstream engine release (`pyproject.toml` has no `CORE_REF` line).
+- A weekly check compares this repository's integration guide with the website's catalogue row ([pull request 41](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/41)).
+- Dependabot uses the `uv` ecosystem, so one dependency pull request updates `pyproject.toml` and `uv.lock` together
+  ([pull request 17](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/17)).
+
+The entries below are the detail.
 
 ### Added
 - `.github/workflows/guide-drift.yml` switches on the website's check that this repository's integration guide still says what the website says (website issue saulpatinojr/HCW-HybridCloudWorks#1356). It calls a reusable workflow (a workflow that another repository can call, like a function) from the website repository, pinned to a full commit, and compares the catalogue row pasted into `docs/website-integration/integration-guide.md` with the website's row for `cloud-assessment`, field by field. It runs on pull requests that touch the guide or this workflow, every Monday at 06:35 UTC and on demand. It holds no secret and has `contents: read` only. To switch it off, delete the file. How to read a failure: https://github.com/saulpatinojr/HCW-HybridCloudWorks/blob/main/docs/runbooks/addon-guide-drift.md
@@ -14,6 +58,8 @@ All notable changes to this repository are recorded here. The format follows Kee
 - `docs/whats-new-upstream.md`: a running note of what the App released and changed that reaches this edition (current upstream state, the two releases not yet adopted, the compatibility trial, the adoption steps, and open upstream decisions). `CLAUDE.md` and `docs/README.md` point to it.
 
 ### Changed
+- The lab image repository on Docker Hub is renamed from `hybridcloudworks/hcw-addon-cloud-assessment` to `hybridcloudworks/img-ca-lab-addon` (owner naming convention `img-<short name>-<job>-<type>`, 2026-10-25), and its tag is now the full release tag (`v0.1.0`, not `0.1.0`). `publish-images.yml` (`IMAGE`, the tag, the image title label), the local `:dev` build tag, the README and the deployment and integration documents follow. The container name on the lab host (`hcw-addon-cloud-assessment`) is **not** changed: the website's host role owns it. Nothing is published by this change; the next `v*` tag pushes to the new name once the Docker OIDC connection allows it (`docs/deployment/lab-host.md`, step 4).
+- Hardening: the last step of `publish-images.yml` printed the release version straight into a shell command (`echo "image_tag: ${{ steps.version.outputs.version }}"`). The version comes from the pushed tag's name, so a crafted tag name could inject a command. It now reaches the shell through the environment variable `IMAGE_TAG` and is printed as `"${IMAGE_TAG}"`. This was already present before the rename; only people with write access can push tags.
 - `core-update.yml` opens its bump pull request with a short-lived GitHub App token (`actions/create-github-app-token`, pinned to v3.3.0; the HCW Main Admin App, installed on this repository: its client ID is the repository variable `HCW_MAIN_ADMIN_CLIENT_ID`, which is not a secret, and its private key is the repository secret `HCW_MAIN_ADMIN_PRIVATE_KEY`, which is never printed; the job no longer runs in an environment) instead of `GITHUB_TOKEN`. The token step names this repository (`repositories: ${{ github.repository }}`) and sets no `owner`, so even an empty value could only fall back to this repository, never to every repository the App is installed on. Why: a pull request opened with `GITHUB_TOKEN` starts no workflow, so the required checks of the `Protect main` ruleset would never run on it and it could not merge. The token is minted for this repository only, with Contents and Pull requests write, after the compatibility check and just before the pull request is opened; `GITHUB_TOKEN` is now `contents: read` only. Because the App's pull request starts this edition's own CI, the "do not trigger other workflows" comment is gone; the compatibility check in the run still decides the label and whether auto-merge is requested. Turning on auto-merge no longer fails the run when the repository setting "Allow auto-merge" is off; it warns and leaves the pull request to merge by hand. A manual run with `probe=true` mints the token, makes a read-only call and lists the repositories the token covers (the run fails unless that is this repository only), and opens no pull request and asks for no auto-merge even when a newer release exists, to prove the credential while the workflow is still inert (no `CORE_REF` line yet). `tests/security/test_core_update_app_token.py` pins all of it (no `GITHUB_TOKEN` passed to `create-pull-request`, the token step first, the HCW Main Admin variable and secret, the token limited to this repository, exactly the two permissions, SHA pins, and none of the old credential names left). To rotate the key, generate a new private key on the settings page of the App (https://github.com/settings/apps), replace the repository secret `HCW_MAIN_ADMIN_PRIVATE_KEY` in every repository that holds the key (this one: https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/settings/secrets/actions; the App is installed on the four add-on repositories, so check the other three), then delete the old key on the settings page of the App. The settings page can hold several keys, so a separate key per repository lets you revoke one without touching the others.
 - `docs/website-integration/integration-guide.md` follows the website after hybridcloudworks.com#1359 (issues #1353 and #1354, owner decisions of 2026-10-24): the row now holds `downloads` and `clipboard-write` (it held `navigate` and `downloads`), the frame address carries `?theme=dark|light` read once from the site's theme, the clipboard grant is write only, and the row copy is taken from website commit b0cf0055.
 - `docs/website-integration/integration-guide.md` now follows the website's real catalogue row. The row pasted into it was
@@ -47,7 +93,20 @@ All notable changes to this repository are recorded here. The format follows Kee
   stops being MIT, and the pre-publish check in `publish-images.yml` fails when the image about to be pushed lacks it.
   The `labels:` input of `publish-images.yml` must not set this label: it would override the Dockerfile's. The image
   tags on Docker Hub on 2026-10-26 (`0.1.0`, `v0.1.0` and `v0.1.1-rc.1`) were built without the
-  label and are not changed; the label reaches Docker Hub with the next tagged release.
+  label and are not changed; the label reaches Docker Hub with the next tagged release, which is `v0.1.1`.
+- Libraries in the image, by Dependabot pull requests (checked by comparing the committed `requirements.lock.txt` at
+  `v0.1.0` with what `uv export --no-dev` prints now): four of the fourteen third-party packages the image installs
+  moved, FastAPI 0.143.0 to 0.162.0, Starlette 1.7.0 to 1.9.0, pydantic 2.14.0 to 2.14.1 and pydantic-core 2.50.0 to
+  2.50.1. The other ten did not move. Other locked packages that are not in the image (for example ruff 0.17.0 to 0.17.2,
+  coverage and certifi) also moved. The engine seed's `pyproject.toml` now allows `pydantic>=2.14,<3` where it said
+  `pydantic==2.14.0` (see the Dependabot entry below for why); the seed's version stays `0.1.0`.
+
+## [0.1.0] - 2026-10-11
+
+The first tagged release (tag `v0.1.0`, commit `6cd7ab6`, 2026-10-11). The entries below are the ones that file held at that
+tag, word for word; everything added to this file after the tag is under 0.1.1.
+
+### Changed
 - Repository hygiene: `.github/dependabot.yml` groups GitHub Actions updates under `all-actions` and removes the unused `/tests/e2e` npm entry; `tests/unit/test_config.py` and `tests/unit/test_edition.py` use `as_posix()`, `os.pathsep`, and `SYSTEMROOT` forwarding for cross-platform Windows/Linux test parity.
 - `core-update.yml`'s checkout no longer persists credentials: two Authorization headers made GitHub answer `400` to `create-pull-request`'s push (reproduced twice in the Migrate App's `rules-refresh`, fixed there in saulpatinojr/HCW-AzMigrateOrchestrator_App#24).
 - README: a "where to try it" paragraph for new visitors; the relationship diagram and text say the App now holds the engine and the seed here is deleted at its first release.
