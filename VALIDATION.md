@@ -89,15 +89,30 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   `tests/security/test_base_update_workflow.py` (static checks of the workflow text, and its two decision scripts run against stand-ins for
   `docker` and `gh`), `tests/unit/test_follow_website_base.py` (the script, including hostile website content) and
   `tests/unit/test_base_image_pin.py` (fails when `versions.env` and a `FROM` line disagree), and it was linted with actionlint.
-  It has **not yet run on GitHub and has not opened a real pull request here**: that needs the workflow on `main` first. The proof to run
-  after the merge is in `docs/operations/runbook.md`, "Keeping the base image on the website's pin" (a throwaway branch with the pin set one
-  release back; it also checks that a person's commit on the pull request branch survives and that an unnecessary pull request is closed).
-  Until it has run, treat these as unverified: the token step, `create-pull-request` pushing and opening the pull request, the registry check
-  on the runner's own `docker buildx` (its output format was checked only against a local buildx), the commit identity
-  (`<id>+<slug>[bot]@users.noreply.github.com`), the closing of an obsolete pull request (by `create-pull-request` deleting the branch, `delete-branch: true`), and the runner's own `python3` (the script is written
-  for Python 3.9 and later and a test guards that, but the version on `ubuntu-26.04` was not looked up). The ruleset "Protect main" also sets
-  "require extra approval for unattributed changes"; whether the pull request needs one extra approval is read from the first real pull
-  request. Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity. That switches off
+  **Proved on GitHub on 2026-10-27** with the proof in `docs/operations/runbook.md`, "Keeping the base image on the website's pin": a throwaway
+  branch (`proof/base-update`, deleted afterwards) with the pin set one release back, so nothing on `main` was touched.
+  - Run [40488729010](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/runs/40488729010): `plan` and `open-pr` both green. The plan
+    printed `changed=true`, old `sha256:a2b82f3c…`, new `sha256:fbecd461…`, and the new digest's platforms included `linux/386` and `linux/s390x`
+    (so the registry check works with the runner's own `docker buildx`). The App token was minted and pull request
+    [#55](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/55) was opened by `app/hcw-main-admin`, ready for review, with the
+    "platforms compared" box ticked. Its commit is credited to `hcw-main-admin[bot]`. The repository's checks (`lint`, `test`, `image`,
+    `catalog-check`, `package`, `e2e`, CodeQL, `pip-audit`, `secret-scan`, `dependency-review`) ran on that pull request and all passed, which is
+    what the App token is for.
+  - Run [40490178354](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/runs/40490178354): with a commit a person had pushed to
+    `base-update/website-base`, the run logged that the pull request was left alone, `open-pr` was skipped, and the person's commit stayed the last
+    commit on the branch.
+  - Run [40493622020](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/runs/40493622020): after the throwaway branch went back to the
+    website's pin, the run logged that the pull request was obsolete, `open-pr` succeeded, and pull request
+    [#58](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/58) ended closed (not merged) with `base-update/website-base` deleted
+    (`create-pull-request` with `delete-branch: true`).
+  - The workflow's pull request asks the repository owner for a review (`CODEOWNERS` names the owner for every path), so a proof pull request looks like any other. Two of them (#55 and #57)
+    were merged into the throwaway branch by the owner's account, about ten minutes after they opened, before the next step could use them; nothing
+    on `main` was affected. The runbook now says to run steps 7 to 11 straight after step 5.
+  Still unverified: whether the ruleset "Protect main" option "require extra approval for unattributed changes" asks for an approval on a pull
+  request into `main` (the proof's pull requests went into the throwaway branch, which that ruleset does not govern; it is read from the first real
+  pull request); the first scheduled run (the daily trigger, 07:37 UTC); what happens when the website moves again while a pull request holds a
+  person's commit (only the "left alone" half was seen live); and the runner's own Python version (the script ran, so it is compatible, but the version
+  was not read). Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity. That switches off
   `base-update` and the weekly `base-follows-website` job together, so after a quiet spell the weekly job is not an independent second
   check. How to see whether either has been switched off, and how to switch them back on, is in `docs/operations/runbook.md`, "If the
   daily run goes quiet".
