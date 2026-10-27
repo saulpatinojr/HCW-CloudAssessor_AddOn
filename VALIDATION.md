@@ -84,3 +84,18 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   touching the others.
 - Auto-merge of a compatible bump needs the repository setting "Allow auto-merge", which was off on 2026-10-26 (UTC) and has since been turned on.
   With it off, `core-update` warns and leaves the pull request for a person to merge.
+- `base-update.yml` moves the base image pin to the website's pin by opening a pull request, with the same HCW Main Admin App credential as
+  `core-update.yml` (so `core-update.yml`'s probe run also proves the credential here). It is covered by
+  `tests/security/test_base_update_workflow.py` (static checks of the workflow text, and its two decision scripts run against stand-ins for
+  `docker` and `gh`), `tests/unit/test_follow_website_base.py` (the script, including hostile website content) and
+  `tests/unit/test_base_image_pin.py` (fails when `versions.env` and a `FROM` line disagree), and it was linted with actionlint.
+  It has **not yet run on GitHub and has not opened a real pull request here**: that needs the workflow on `main` first. The proof to run
+  after the merge is in `docs/operations/runbook.md`, "Keeping the base image on the website's pin" (a throwaway branch with the pin set one
+  release back; it also checks that a person's commit on the pull request branch survives and that an unnecessary pull request is closed).
+  Until it has run, treat these as unverified: the token step, `create-pull-request` pushing and opening the pull request, the registry check
+  on the runner's own `docker buildx` (its output format was checked only against a local buildx), the commit identity
+  (`<id>+<slug>[bot]@users.noreply.github.com`), the closing of an obsolete pull request (by `create-pull-request` deleting the branch, `delete-branch: true`), and the runner's own `python3` (the script is written
+  for Python 3.9 and later and a test guards that, but the version on `ubuntu-26.04` was not looked up). The ruleset "Protect main" also sets
+  "require extra approval for unattributed changes"; whether the pull request needs one extra approval is read from the first real pull
+  request. Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity; the weekly
+  `base-follows-website` job is the second check if that ever happens.

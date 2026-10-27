@@ -92,7 +92,7 @@ Action (optional, workflow-only): pass both through `env:` and quote them. `core
 `certifi` moved to `2026.10.23` in the App's locks (advisory PYSEC-2026-4320, fixed in `2026.10.19`); `fastapi` and `ruff` were
 brought in line with their pins; `CLAUDE.md` was added and allow-listed by the App's documentation check.
 **Reaches this repository: no.** This repository's `uv.lock` already has `certifi` `2026.10.19` (the fixed version), `ruff` `0.17.1`
-and `fastapi` `0.150.0`. Action: none. The App's Python base image tag is `python:3.14.8-slim-trixie`, the same tag this repository uses (digests were not compared).
+and `fastapi` `0.150.0`. Action: none. On 2026-10-24 the App's Python base image tag was `python:3.14.8-slim-trixie`, the same tag this repository used then (digests were not compared). This repository's base now follows the website's pin by itself (`base-update.yml`), so read `infrastructure/docker/versions.env` for the current one.
 
 ### 2026-10-24: access controls on the App (App [#36](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/36), ticket [#25](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/25))
 
