@@ -90,6 +90,15 @@ gh workflow enable base-update.yml -R saulpatinojr/HCW-CloudAssessor_AddOn; gh w
 uses a throwaway branch, so `main` is never touched. The commands are PowerShell. The previous digest used below is the one
 this repository pinned before 2026-10-26 (`git log -p -- infrastructure/docker/versions.env`); it is still in the registry.
 
+**Read this before you start.** The workflow's pull request asks the repository owner for a review (`CODEOWNERS` names the
+owner for every path), so a proof pull request looks exactly like a real one and is easy to merge by mistake. It happened
+twice in the first proof (on 2026-10-27): the owner's account merged the proof's pull request into the throwaway branch about
+ten minutes after it opened, which is about when its checks finish, and the step that needed it could no longer be done.
+Nothing on `main` was affected, because the proof's pull requests go into the throwaway branch. To avoid it, do steps 5 to
+11 in one sitting without pausing (they take about two minutes of waiting), and do not wait for the checks in step 8. If a
+push in step 11 is refused because the proof's pull request was merged, reset the throwaway folder and begin again at
+step 3: `git -C $wt fetch origin; git -C $wt reset --hard origin/proof/base-update`. Step 10 can be left out of a repeat.
+
 1. Use one PowerShell window for every step (later steps use the variables set here). Set the names and a helper that starts
    the workflow on the throwaway branch and waits for the new run. Success: no output.
 
@@ -165,11 +174,13 @@ this repository pinned before 2026-10-26 (`git log -p -- infrastructure/docker/v
    $pr = gh pr list -R $repo --head base-update/website-base --state open --json number --jq ".[0].number"; gh pr list -R $repo --head base-update/website-base --state open --json number,url,baseRefName,title,author; gh pr view $pr -R $repo --json body --jq .body | Select-String "\[.\] The new digest is an index"
    ```
 
-8. Watch its checks. Success: `lint`, `test`, `image`, `catalog-check` and the others finish green (they run only because
-   the pull request was opened with the App token). Also note whether the pull request says it needs an extra approval.
+8. See that its checks started. Success: the list shows `lint`, `test`, `image`, `catalog-check` and others, pending or
+   passing; they exist only because the pull request was opened with the App token. Do not wait for them to finish: that
+   takes about ten minutes, which is when the pull request is most likely to be merged by mistake (see above). In the first
+   proof they all finished green. Also note whether the pull request says it needs an extra approval.
 
    ```powershell
-   gh pr checks $pr -R $repo --watch
+   gh pr checks $pr -R $repo
    ```
 
 9. Check the commit is credited to the App's bot user. Success: a line that names `hcw-main-admin` (GitHub may print it with
@@ -184,7 +195,7 @@ this repository pinned before 2026-10-26 (`git log -p -- infrastructure/docker/v
     line printed is the commit you pushed. (An empty commit proves the guard; it does not prove what happens to a changed file.)
 
     ```powershell
-    git -C $wt fetch origin base-update/website-base; git -C $wt switch -c proof/person-fix origin/base-update/website-base; git -C $wt -c user.email=34853639+saulpatinojr@users.noreply.github.com -c user.name="Saul Patino" commit --allow-empty -m "proof: a fix a person pushed"; git -C $wt push origin HEAD:base-update/website-base; Start-BaseUpdate; gh run view $run -R $repo --log | Select-String "##\[notice\].*left alone"; gh run view $run -R $repo --json jobs --jq ".jobs[] | .name + ': ' + .conclusion"; git -C $wt fetch origin; git -C $wt log origin/base-update/website-base -1 --format=%s
+    git -C $wt fetch origin base-update/website-base; git -C $wt switch -c proof/person-fix origin/base-update/website-base; git -C $wt -c user.email=34853639+saulpatinojr@users.noreply.github.com -c user.name="Saul Patino" commit --allow-empty -m "proof: a fix a person pushed"; git -C $wt push origin HEAD:base-update/website-base; Start-BaseUpdate; gh run view $run -R $repo --log | Select-String "##\[notice\].*left alone"; (gh run view $run -R $repo --json jobs | ConvertFrom-Json).jobs | ForEach-Object { "$($_.name): $($_.conclusion)" }; git -C $wt fetch origin; git -C $wt log origin/base-update/website-base -1 --format=%s
     ```
 
 11. Check that a pull request that has become unnecessary is closed. Move the throwaway branch to the website's pin (undoing
@@ -193,7 +204,7 @@ this repository pinned before 2026-10-26 (`git log -p -- infrastructure/docker/v
     `MERGED`, the proof has found a fault: record it and do not clean up before reading the `open-pr` log.
 
     ```powershell
-    git -C $wt switch proof/base-update; git -C $wt -c user.email=34853639+saulpatinojr@users.noreply.github.com -c user.name="Saul Patino" revert --no-edit HEAD; git -C $wt push origin proof/base-update; Start-BaseUpdate; gh run view $run -R $repo --log | Select-String "##\[notice\].*obsolete"; gh run view $run -R $repo --json jobs --jq ".jobs[] | .name + ': ' + .conclusion"; gh pr view $pr -R $repo --json state --jq ".state"
+    git -C $wt switch proof/base-update; git -C $wt -c user.email=34853639+saulpatinojr@users.noreply.github.com -c user.name="Saul Patino" revert --no-edit HEAD; git -C $wt push origin proof/base-update; Start-BaseUpdate; gh run view $run -R $repo --log | Select-String "##\[notice\].*obsolete"; (gh run view $run -R $repo --json jobs | ConvertFrom-Json).jobs | ForEach-Object { "$($_.name): $($_.conclusion)" }; gh pr view $pr -R $repo --json state --jq ".state"
     ```
 
 12. Clean up. This deletes only what the proof made: the branch `base-update/website-base` (step 11 may already have deleted it,
