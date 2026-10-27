@@ -24,8 +24,9 @@ four newer libraries) and the automation around it. Because the libraries are pa
 The version moves from `0.1.0` to `0.1.1` in `pyproject.toml`, in `uv.lock` (the `cloud-assessment-lab` entry only), in
 `__version__` (`src/cloud_assessment_lab/__init__.py`) and in `repository.manifest.json`, so `/api/health` and the
 `X-Addon-Version` header say `0.1.1`. The engine seed keeps its own version, `0.1.0`, and `docs/api/openapi.yaml` keeps
-`info.version: 0.1.0`, because that field is the version of the API document and the API has not changed. Publishing the
-image is the tag `v0.1.1`, which is the owner's call and is not part of this change.
+`info.version: 0.1.0`, because that field is the version of the API document and the API has not changed. The image was
+published on 2026-10-27 by the tag `v0.1.1` (digest `sha256:95082857e3b866743ffa5c827c7b897d085e945d80aa4b710f58926b03170456`;
+[release](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/releases/tag/v0.1.1)).
 
 In short, since `v0.1.0`:
 
