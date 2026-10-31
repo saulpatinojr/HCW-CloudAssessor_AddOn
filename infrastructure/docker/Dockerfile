@@ -28,8 +28,6 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.32@sha256:df4cae8f3a96d175e2e5f992e5975500
 COPY pyproject.toml uv.lock ./
 RUN UV_NO_CACHE=1 uv export --frozen --format requirements-txt --no-dev --no-emit-project --no-emit-workspace --no-header -o requirements.lock.txt \
  && pip install --require-hashes --no-deps --prefix /install -r requirements.lock.txt
-COPY packages/cloud-assessor-core/src/cloud_assessor_core /install/lib/python3.14/site-packages/cloud_assessor_core
-COPY packages/cloud-assessor-core/catalog /install/lib/python3.14/site-packages/cloud_assessor_core/catalog_data
 COPY src/cloud_assessment_lab /install/lib/python3.14/site-packages/cloud_assessment_lab
 RUN find /install -name "__pycache__" -type d -prune -exec rm -rf {} + \
  && python - <<'PY'

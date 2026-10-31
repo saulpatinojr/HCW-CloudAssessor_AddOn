@@ -9,7 +9,6 @@ __pycache__
 htmlcov
 docs
 tests
-packages/cloud-assessor-core/tests
 node_modules
 test-results
 playwright-report
