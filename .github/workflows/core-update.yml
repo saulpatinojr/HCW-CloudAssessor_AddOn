@@ -24,16 +24,21 @@
 # scripts/adopt_core_wheel.py and `uv lock --no-build` (no engine code), refuses an artifact that differs from that, takes
 # only docs/rules/catalog.md from it (as plain Markdown), and only then mints the App token.
 # A step in the same job could reach later steps (through $GITHUB_ENV, or by rewriting a downloaded action), which is
-# why the split matters. The outcome is untrusted: it picks the label, the title and the body text, and nothing else.
+# why the split matters. The outcome is untrusted: it picks the label, the title, the body text and the
+# not-compatible warning, and nothing else.
 # Auto-merge never reads it: it is turned on when the repository variable CORE_AUTOMERGE is `true` and the
 # pull-request job's own byte-for-byte check passed, and GitHub then merges only after the required checks of the
 # "Protect main" ruleset pass on the pull request itself (a fresh run on its own head). Those checks are the trusted
 # signal.
 #
 # Main only. The pull-request job runs this checkout's scripts/adopt_core_wheel.py before it mints the App token, so
-# the checkout must be main. A manual run started on any other branch (gh workflow run --ref <branch>) is refused by
-# the first step of each job with an error naming the branch, and the pull-request job's `if:` skips it as well; both
-# checkouts take the exact commit the run was started for (github.sha), so the two jobs read the same main.
+# the checkout must be main. A manual run started on any branch other than main fails at the bump job's first step
+# with an error naming the branch, and the pull-request job's `if:` then skips that job. The pull-request job's own
+# first step makes the same check, as a backstop in case that `if:` is ever loosened. On main, both checkouts take the
+# exact commit the run was started for (github.sha), so the two jobs read the same main.
+#
+# Start a manual run from main with this complete line (the probe line below adds `-f probe=true`):
+#   gh workflow run core-update.yml --ref main
 # The App token has no `workflows` permission, so a bump pull request can never change a file under .github/workflows;
 # ci.yml and security.yml are written to pass both with the seed and with the wheel.
 #
@@ -41,7 +46,8 @@
 # GITHUB_TOKEN. A pull request opened with GITHUB_TOKEN starts no workflow, so the required checks of the
 # "Protect main" ruleset never ran on it and it could never merge. One opened with the App token does start
 # them, so this edition's own CI (ci, security) also runs on the bump pull request; the compatibility check
-# in the `bump` job still runs first and picks the compatible / needs-adaptation label (only the label).
+# in the `bump` job still runs first and picks the compatible / needs-adaptation label and
+# the pull request's wording, never the merge.
 # The credential is the HCW Main Admin App (a GitHub App owned by the repository owner, installed on this
 # repository). Its client ID is the repository variable HCW_MAIN_ADMIN_CLIENT_ID (not a secret) and its private
 # key is the repository secret HCW_MAIN_ADMIN_PRIVATE_KEY. The key lives only as that secret and is never printed.
@@ -194,8 +200,9 @@ jobs:
   # It does not trust the artifact: it regenerates the bump itself and refuses the artifact unless its pyproject.toml,
   # uv.lock, Dockerfile, .dockerignore and deletions are byte-identical to what it produced. The one file it takes
   # from the artifact is docs/rules/catalog.md (generating it needs the engine), and only as plain Markdown; the bump
-  # pull request's own CI (`catalog-check`, no secrets) proves it matches the engine. The outcome only picks the label
-  # and the title. Auto-merge does not read the outcome: it needs the repository variable CORE_AUTOMERGE and this
+  # pull request's own CI (`catalog-check`, no secrets) proves it matches the engine. The outcome only picks the label,
+  # the title, the body text and the not-compatible warning. Auto-merge does not read the outcome: it needs the
+  # repository variable CORE_AUTOMERGE and this
   # job's own check, and the merge waits for the required checks on the pull request.
   pull-request:
     needs: bump
@@ -293,7 +300,8 @@ jobs:
           done < <(git diff --cached --name-only; git diff --name-only; git ls-files --others --exclude-standard)
           git --no-pager diff --cached --stat HEAD
           git --no-pager diff --stat
-          # Untrusted (job 1 ran upstream code): used for the label and the title only.
+          # Untrusted (job 1 ran upstream code): used for the label, the title, the body text and the not-compatible
+          # warning only.
           echo "outcome=${outcome}" >> "$GITHUB_OUTPUT"
       - id: app-token
         name: GitHub App token (this repository only; Contents and Pull requests write)

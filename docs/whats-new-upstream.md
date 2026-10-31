@@ -78,9 +78,9 @@ none of the engine's code. It regenerates the bump itself with main's own `scrip
 file it takes from the artifact is `docs/rules/catalog.md`, because generating it needs the engine, and only as plain
 Markdown (UTF-8 text, no control characters, no HTML, at most 256 KiB, starting with its heading); the bump pull
 request's own `catalog-check` job, which holds no secret, then proves it matches the engine. Only then does the job
-mint the App token and open the pull request. The outcome counts as untrusted: it picks the label, the title and the
-body text, and auto-merge never reads it (it needs `CORE_AUTOMERGE` and the byte-for-byte check, then the required
-checks). The workflow runs from `main` only: a manual run started on another branch stops at the first step of each
+mint the App token and open the pull request. The outcome counts as untrusted: it picks the label, the title, the
+body text and the not-compatible warning, and auto-merge never reads it (it needs `CORE_AUTOMERGE` and the
+byte-for-byte check, then the required checks). The workflow runs from `main` only: a manual run started on another branch stops at the first step of each
 job with an error naming the branch. Both tags are refused unless they are `v<major>.<minor>.<patch>`
 (the pin may also be `v<version>-seed`), and later bumps move the pin with an exact replacement
 (`adopt_core_wheel.py --bump`), not a `sed` script, so a hostile tag cannot run a command.

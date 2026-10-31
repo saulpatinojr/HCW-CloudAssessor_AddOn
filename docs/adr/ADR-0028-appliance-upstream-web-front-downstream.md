@@ -1,5 +1,15 @@
 > Copied from HCW-AzMigrateOrchestrator_App/docs/adr/ADR-0028-appliance-upstream-web-front-downstream.md on 2026-10-10; applies by analogy to the Cloud Assessor pair
 > (HCW-CloudAssessor_App upstream, HCW-CloudAssessor_AddOn downstream). The canonical text lives upstream; this copy is not edited here.
+>
+> Note, 2026-10-31 ([pull request 68](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/68), this edition only): the decision in item 3 below stands (the copied text is left as it was); how it is enforced
+> changed. The `compatible` / `needs-adaptation` label comes from the bump job, which runs the new upstream code, so it
+> is not trusted and no longer turns auto-merge on. With `CORE_AUTOMERGE=true`, auto-merge is turned on for every bump
+> pull request, and GitHub merges only a bump whose required checks pass on that pull request; auto-merge waits for
+> them. The required checks are that independent gate: they cover the compatibility check's suites and the repository's
+> other required checks, and they run again on the pull request itself. A bump that really breaks this edition fails
+> them and does not merge until it is fixed. The label can also say `needs-adaptation` after a one-off failure in the
+> bump job (its compatibility step is allowed to fail), and such a bump merges once its own checks pass; select
+> **Disable auto-merge** on the pull request to hold one.
 
 # ADR-0028: The appliance is the upstream product; the web-front edition consumes published packages
 
