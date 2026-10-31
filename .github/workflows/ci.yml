@@ -63,6 +63,17 @@ jobs:
             echo '::error::azure is importable in the lab image'; exit 1
           fi
           docker run --rm --entrypoint python addon:ci -c 'import fastapi, pydantic, uvicorn'
+      # versions.env names the Python the base image carries (BASE_PYTHON_VERSION, moved with the digest by
+      # base-update.yml). A digest that is not that Python (a mistyped digest, or a website pin whose tag and digest
+      # disagree) fails here instead of shipping an image that says one version and runs another.
+      - name: The image runs the Python that versions.env names (BASE_PYTHON_VERSION)
+        run: |
+          set -euo pipefail
+          want="$(sed -n 's/^BASE_PYTHON_VERSION=//p' infrastructure/docker/versions.env)"
+          [ -n "$want" ] || { echo "::error file=infrastructure/docker/versions.env::BASE_PYTHON_VERSION is missing"; exit 1; }
+          have="$(docker run --rm --entrypoint python addon:ci --version)"
+          [ "$have" = "Python ${want}" ] || { echo "::error file=infrastructure/docker/versions.env::the image runs '${have}', versions.env says BASE_PYTHON_VERSION=${want}"; exit 1; }
+          echo "image Python: ${have} (versions.env: ${want})"
       - name: The image states its open-source licence (org.opencontainers.image.licenses is the SPDX id of LICENSE)
         run: |
           set -euo pipefail
@@ -78,8 +89,13 @@ jobs:
         with: { python-version: "${{ env.PYTHON_VERSION }}" }
       - run: python -m pip install "uv==${{ env.UV_VERSION }}"
       - run: uv sync --frozen --all-packages
+      # packages/ holds the engine seed until the first core-update pull request deletes it; from then on the engine
+      # is the upstream wheel (tested upstream) and coverage measures this edition's own code, src/.
       - name: Unit, contract, security and manifest tests with the 85 percent coverage gate
-        run: uv run pytest -q --cov=packages --cov=src --cov-report=term-missing --cov-report=xml --cov-fail-under=85
+        run: |
+          set -euo pipefail
+          cov=(--cov=src); if [ -d packages ]; then cov+=(--cov=packages); fi
+          uv run pytest -q "${cov[@]}" --cov-report=term-missing --cov-report=xml --cov-fail-under=85
       - name: Startup refusal under an identity endpoint
         run: |
           set +e

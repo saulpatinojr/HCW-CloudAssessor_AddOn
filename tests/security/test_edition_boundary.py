@@ -4,7 +4,10 @@ import ast
 import re
 import subprocess
 import sys
+from importlib import metadata
+from pathlib import Path
 
+import cloud_assessor_core
 import pytest
 
 from ..conftest import ROOT
@@ -12,16 +15,29 @@ from ..conftest import ROOT
 FORBIDDEN_PACKAGES = re.compile(r'^(name = "|  )?(azure-|msal|msrest|boto3|botocore)', re.MULTILINE)
 FORBIDDEN_ENDPOINTS = ("management.azure.com", "login.microsoftonline.com", "graph.microsoft.com")
 FORBIDDEN_MODULES = ("azure", "msal", "boto3", "botocore", "msrest")
-PY_DIRS = [ROOT / "packages", ROOT / "src", ROOT / "scripts"]
+SEED = ROOT / "packages" / "cloud-assessor-core"
+# The engine is checked wherever it is installed from: the local seed until the first core-update pull request, the
+# upstream release wheel (in site-packages) after it. Directories that do not exist are skipped, never an error.
+ENGINE_DIR = Path(cloud_assessor_core.__file__).resolve().parent
+PY_DIRS = [d for d in (ROOT / "packages", ROOT / "src", ROOT / "scripts", ENGINE_DIR) if d.is_dir()]
 
 
 def _py_files():
     for base in PY_DIRS:
-        yield from (p for p in base.rglob("*.py") if ".venv" not in p.parts)
+        yield from (p for p in base.rglob("*.py") if ".venv" not in p.relative_to(base).parts)
+
+
+def test_the_installed_engine_declares_no_cloud_sdk():
+    requires = metadata.requires("cloud-assessor-core") or []
+    assert requires, "cloud-assessor-core declares no dependencies at all (expected pydantic)"
+    for req in requires:
+        name = re.split(r"[\s<>=!~;\[(]", req, maxsplit=1)[0].lower()
+        assert not name.startswith(("azure-", "msal", "msrest", "boto3", "botocore")), f"the engine requires {req}"
 
 
 def test_no_cloud_sdk_in_dependency_manifests():
-    for name in ("pyproject.toml", "packages/cloud-assessor-core/pyproject.toml", "uv.lock"):
+    names = ["pyproject.toml", "uv.lock"] + (["packages/cloud-assessor-core/pyproject.toml"] if SEED.is_dir() else [])
+    for name in names:
         text = (ROOT / name).read_text(encoding="utf-8")
         for pkg in ("azure-", "msal", "msrest", "boto3", "botocore"):
             assert not re.search(rf'name = "{pkg}', text), f"{name} depends on {pkg}"
@@ -42,9 +58,13 @@ def test_no_cloud_sdk_imports_anywhere():
 
 
 def test_no_azure_endpoints_in_code_or_pane():
-    for base in [ROOT / "packages", ROOT / "src", ROOT / "web"]:
+    for base in [d for d in (ROOT / "packages", ROOT / "src", ROOT / "web", ENGINE_DIR) if d.is_dir()]:
         for path in base.rglob("*"):
-            if path.is_file() and path.suffix in {".py", ".js", ".html", ".css", ".json"} and ".venv" not in path.parts:
+            if (
+                path.is_file()
+                and path.suffix in {".py", ".js", ".html", ".css", ".json"}
+                and ".venv" not in path.relative_to(base).parts
+            ):
                 text = path.read_text(encoding="utf-8", errors="ignore")
                 for endpoint in FORBIDDEN_ENDPOINTS:
                     assert endpoint not in text, f"{path} references {endpoint}"

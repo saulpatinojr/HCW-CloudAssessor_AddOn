@@ -4,6 +4,32 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+### Changed
+
+- The engine update to `v0.2.1` is now set up to happen by itself. The engine (`cloud-assessor-core`) is written in
+  `HCW-CloudAssessor_App` and released there as a wheel (a ready-to-install package file); this repository still ran
+  the old local copy, the seed under `packages/cloud-assessor-core`. The dependency line in `pyproject.toml` now carries
+  the marker `CORE_REF v0.1.0-seed`, and `core-update.yml` (every six hours, or by hand) treats a pin that ends in
+  `-seed` as the first adoption: `scripts/adopt_core_wheel.py` rewrites the line to the `v0.2.1` wheel's URL and removes
+  the workspace entries and the Dockerfile and `.dockerignore` lines for the seed, `git rm -r` deletes the seed, and
+  `uv lock` downloads the wheel and records its sha256 in `uv.lock`. The App's GitHub App token then opens the pull
+  request, so the required checks run on it, and with `CORE_AUTOMERGE=true` a compatible one is queued for auto-merge.
+  This is done by the workflow because the wheel's sha256 can only enter `uv.lock` through `uv lock`, which needs to
+  download the release asset. Each bump now also regenerates `docs/rules/catalog.md`, so the drift check in `ci.yml`
+  passes when a release changes the catalog. Refs saulpatinojr/HCW-MigrateOrchestrator_AddOn#50.
+- Made ready for the wheel without changing behaviour today (the bump pull request cannot change workflows, so these
+  had to come first): `scripts/check-catalog.py` reads the catalog the installed engine loads and prints `cost-evidence`
+  checks; `tests/unit/test_api.py` compares the catalog version with the installed catalog; the edition-boundary tests
+  scan the engine wherever it is installed and check its declared requirements; `pyproject.toml` allows a direct
+  (URL) reference, which hatchling otherwise refuses; `security.yml` leaves the engine out of `pip-audit`, which cannot
+  find it on PyPI (`--strict` would fail, checked locally), as the seed already was; `ci.yml` and the `Makefile`
+  measure `packages/` only while it exists. `tests/unit/test_adopt_core_wheel.py` runs the script and the workflow's
+  `grep` and `sed` lines against copies of the real files. `repository.manifest.json` no longer lists seed files, and
+  the `ruff.toml` ignore for the seed's tests is gone (it ignored a rule that is not selected).
+- The `image` job in `ci.yml` checks that the built image runs the Python that `infrastructure/docker/versions.env`
+  names as `BASE_PYTHON_VERSION`, so a base digest that is not that Python fails the pull request
+  ([saulpatinojr/HCW-HybridCloudWorks#1386](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1386)).
+
 ## [0.1.1] - 2026-10-27
 
 This release exists so that the image on Docker Hub states its licence. The image

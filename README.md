@@ -48,9 +48,11 @@ flowchart LR
 
 The engine was seeded **here** so the lab could ship first, and the App has since adopted it unchanged
 ([`docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md`](docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md)).
-The App now owns the engine and has released it as `v0.2.0` and `v0.2.1`; this repository has not adopted either yet.
-When it pins one of those wheels by URL and hash (a `CORE_REF` line in `pyproject.toml`), it deletes its seed copy, and
-`.github/workflows/core-update.yml` brings later releases as pull requests tested against this edition's suites.
+The App now owns the engine and has released it as `v0.2.0` and `v0.2.1`. The dependency line in `pyproject.toml`
+carries the marker `CORE_REF v0.1.0-seed`, so `.github/workflows/core-update.yml` (every six hours) sees the newer
+release and opens the adoption pull request itself: it pins the wheel by URL, `uv lock` records its sha256, and the seed
+copy is deleted. After that the same workflow brings each later release as a pull request tested against this edition's
+suites.
 What is behind, and the steps to adopt: [`docs/whats-new-upstream.md`](docs/whats-new-upstream.md). Nothing here can reach Azure: `tests/security/test_edition_boundary.py` fails the build
 if anything could, and `publish-images.yml` proves `import azure` fails inside the built image.
 

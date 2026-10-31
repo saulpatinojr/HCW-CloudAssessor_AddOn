@@ -3,6 +3,37 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-10-31 (adoption of engine `v0.2.1` handed to `core-update.yml`)
+
+Toolchain: Python 3.14.6 (`.python-version`), uv 0.11.32 (the version CI uses), Docker 29.9.2 with a daemon, Playwright
+1.63.0 with its preinstalled chromium, on the authoring container. The release asset itself could not be downloaded
+here, so the wheel was built from a clone of the App at tag `v0.2.1` (`55b7242`) with `uv build`; its sha256,
+`6c5564ba0bc82c79060704dd52871e56b51b709c9ee8bdd7b6b7cf0409ca26e7`, is the release asset's (recorded on 2026-10-24 in
+`docs/whats-new-upstream.md`). "Simulation" below is a throwaway copy of the branch in which the workflow's bump step
+was run by hand, with the wheel served on `127.0.0.1` and passed with `--wheel-url` (the only difference from the run on
+GitHub, which uses the release URL).
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| `uv sync --all-packages` (branch, seed) | yes | resolved, 51 packages checked |
+| `uv run ruff check . && uv run ruff format --check .` | yes | clean (90 files) |
+| `uv run python scripts/check-catalog.py`, and `--doc` against `docs/rules/catalog.md` | yes | catalog 1.0.0, 25 criteria, 25 `[VERIFY]`; no drift |
+| `uv lock --check` | yes | exit 0 (the `allow-direct-references` setting does not change the lock) |
+| `uv run pytest -q --cov=packages --cov=src` | yes | 348 passed, coverage 98.12% (gate 85) |
+| `make e2e` | **no, as written**: here `npx --yes playwright@1.63.0` resolves a global Playwright that cannot load `@playwright/test` | the CI way instead (`npm install --no-save @playwright/test@1.63.0`, `CI=1 npx playwright test -c tests/e2e/playwright.config.ts`): 4 passed |
+| Image build (branch, seed), then the `image` job's steps from `ci.yml` | yes, with one local-only change: the proxy's CA certificate copied into the build stage for `pip` | built; `import azure` fails; fastapi, pydantic and uvicorn import; `Python 3.14.8` equals `BASE_PYTHON_VERSION=3.14.8`; licence label `MIT` |
+| The new Python check with `BASE_PYTHON_VERSION=3.14.7` in a copy of `versions.env` | yes | fails as intended: `the image runs 'Python 3.14.8', versions.env says BASE_PYTHON_VERSION=3.14.7` |
+| Simulation: the bump step (`adopt_core_wheel.py`, `git rm -r`, `uv lock`, `uv sync --frozen`, `--doc`) | yes | three files rewritten; `uv.lock` gains `cloud-assessor-core 0.2.1` with hash `sha256:6c5564ba…26e7`; 12 lines of `docs/rules/catalog.md` change |
+| Simulation: what `create-pull-request` commits (`git add --` the five add-paths, then `git commit`) | yes | one commit with the five files and the seed's deletion (44 files); the untracked `package.json` from the e2e install is left out |
+| Simulation: ruff, `check-catalog.py`, `--doc` drift, `uv lock --check` | yes | clean; catalog 1.1.0, 25 criteria; no drift |
+| Simulation: `pytest` with the coverage line `ci.yml` now runs | yes | 263 passed, 9 skipped (the seed-only tests), 1 failed: the sed test, only because the simulated URL is `127.0.0.1` rather than `github.com/.../releases/download/`; with the URL put in the release form it passes. Coverage 96.01% |
+| Simulation: Playwright e2e | yes | 4 passed |
+| Simulation: image build with the wheel, then the `image` job's steps | yes (build network `host` to reach the local server) | pip installs `cloud-assessor-core-0.2.1` from the lock with `--require-hashes`; no cloud SDK in `/install`; all checks pass; the container answers `/api/health` with catalog `1.1.0` |
+| Simulation: `pip-audit --strict` on the export with and without `--no-emit-package cloud-assessor-core` | yes | without it: exit 1, `Dependency not found on PyPI and could not be audited: cloud-assessor-core (0.2.1)`; with it: `No known vulnerabilities found` |
+| Findings and scores for both fictional samples, seed against `0.2.1` (`report.json` through the API) | yes | identical; only `catalog_version`, `core_version`, `created_at` and the two new `null` keys `edition` and `scope` differ |
+| actionlint on `ci.yml`, `core-update.yml`, `security.yml` | partly | one run printed only the known `ubuntu-26.04` runner-label notice in the part shown; a filtered re-run was not allowed in this session, so a clean result is not claimed |
+| The real `core-update.yml` run, the bump pull request, its required checks and auto-merge | **no** | GitHub only, after this pull request merges: the next scheduled run (minute 41 of hours 0, 6, 12, 18 UTC) or `gh workflow run core-update.yml -R saulpatinojr/HCW-CloudAssessor_AddOn --ref main` |
+
 ## Run 2026-10-27 (release 0.1.1 published)
 
 Run on GitHub after the owner said yes to the tag ([issue 47](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/issues/47)).
@@ -111,8 +142,9 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   equal to `pyproject.toml` and `repository.manifest.json` by a test).
 - starlette 1.7 prefers `httpx2` for its test client; this edition pins `httpx` (the brief) and mutes that one
   deprecation notice in `pyproject.toml`.
-- `core-update.yml` is inert until `HCW-CloudAssessor_App` publishes a release and this repository pins
-  `cloud-assessor-core` by git tag (ADR-0001).
+- `core-update.yml` is armed since 2026-10-31: the seed's dependency line carries `CORE_REF v0.1.0-seed`, and the
+  first run after that opens the adoption pull request for the newest release (the wheel by URL, its sha256 in
+  `uv.lock`; ADR-0001). Until that pull request merges, the engine is still the seed.
 - When it is not inert, `core-update.yml` opens the pull request with a GitHub App token (the HCW Main Admin App: its client ID is the repository variable
   `HCW_MAIN_ADMIN_CLIENT_ID`, its private key the repository secret `HCW_MAIN_ADMIN_PRIVATE_KEY`), not `GITHUB_TOKEN`, so the required checks run on the pull request itself. That path is covered by
   `tests/security/test_core_update_app_token.py` (static) and was linted with actionlint and zizmor; it has not yet opened

@@ -3,6 +3,7 @@ import json
 import zipfile
 
 import pytest
+from cloud_assessor_core.catalog import load_catalog
 from fastapi.testclient import TestClient
 
 from cloud_assessment_lab import __version__
@@ -29,7 +30,8 @@ def test_health_is_flat_and_complete(client):
     assert body["turnstile"] == {"required": False, "siteKey": None} and body["siteOrigins"] == [
         "https://hybridcloudworks.com"
     ]
-    assert body["catalog"] == {"version": "1.0.0", "count": 25} and body["limits"] == {
+    # The catalog version is the installed engine's: 1.0.0 in the seed, 1.1.0 from release v0.2.0 on (25 criteria).
+    assert body["catalog"] == {"version": load_catalog().version, "count": 25} and body["limits"] == {
         "maxUploadBytes": 5242880,
         "maxRows": 5000,
         "ttlMinutes": 120,

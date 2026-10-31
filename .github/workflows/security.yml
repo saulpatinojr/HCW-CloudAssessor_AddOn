@@ -43,10 +43,14 @@ jobs:
         with: { python-version: "3.14" }
       - run: python -m pip install "uv==0.11.32"
       - run: uv sync --frozen --all-packages
+      # The engine (cloud-assessor-core) is first-party and left out of the audit, as it was while it was the seed
+      # (--no-emit-workspace): once it is the upstream release wheel it is not on PyPI, so pip-audit could not look it
+      # up and --strict would fail the run. Its own dependency (pydantic) stays in the export and is audited; the
+      # wheel itself is pinned by sha256 in uv.lock and audited upstream (HCW-CloudAssessor_App).
       - name: Known vulnerabilities in the runtime set the image installs (exported from uv.lock as the build does)
         run: |
           set -euo pipefail
-          uv export --frozen --format requirements-txt --no-dev --no-emit-project --no-emit-workspace --no-header -o "${RUNNER_TEMP}/requirements.lock.txt"
+          uv export --frozen --format requirements-txt --no-dev --no-emit-project --no-emit-workspace --no-emit-package cloud-assessor-core --no-header -o "${RUNNER_TEMP}/requirements.lock.txt"
           uv run pip-audit -r "${RUNNER_TEMP}/requirements.lock.txt" --strict
   base-follows-website:
     # CONTRACT-DECISIONS item 20: the base is the website's current pin. Weekly and on main, not on pull requests, so a

@@ -7,7 +7,9 @@ the website frames, fictional samples, docs, a hardened Dockerfile and SHA-pinne
 is **owned upstream** by `saulpatinojr/HCW-CloudAssessor_App`: it was seeded here (ADR-0001), the App adopted it unchanged
 and has released it as `v0.2.0` and `v0.2.1` (wheel assets). The copy under `packages/cloud-assessor-core` is the
 original `0.1.0` seed, now two releases behind and **not to be edited**; engine and catalog changes go upstream first and
-arrive here as a release wheel (`core-update.yml`, inert until a `CORE_REF` line exists). Adopting `v0.2.1` is still to do.
+arrive here as a release wheel through `core-update.yml`. The dependency line carries `CORE_REF v0.1.0-seed`, so the
+workflow's next run opens the adoption pull request itself (`scripts/adopt_core_wheel.py` rewrites the line to the wheel
+URL, the seed is deleted, `uv lock` records the sha256); once that merges, `packages/` is gone and `--cov=packages` drops.
 **Read `docs/whats-new-upstream.md` before changing behaviour here, and update it when you adopt an upstream change.**
 
 - Run `uv sync --all-packages`, then `uv run ruff check . && uv run ruff format --check .`,
