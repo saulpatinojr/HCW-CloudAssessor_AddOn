@@ -37,6 +37,12 @@ All notable changes to this repository are recorded here. The format follows Kee
   seed's catalog (the in-project `.venv` is inside the repository, so it had written into an installed release). The
   edition-boundary tests forbid the engine to import a network module, and the health test reads the catalog version
   from `criteria.json` directly instead of through the loader the route itself uses.
+- The `pull-request` job of `core-update.yml` no longer trusts the artifact's contents (Copilot review of pull request
+  67). Code in the `bump` job could have rewritten any of the five allowed files before they were collected. The job now
+  regenerates the bump itself with main's `scripts/adopt_core_wheel.py` and `uv lock --no-build` (uv installed by
+  version and sha256), and refuses the artifact unless `pyproject.toml`, `uv.lock`, the Dockerfile, `.dockerignore` and
+  the deletions are byte-identical. `docs/rules/catalog.md` is the only file taken from the artifact, and only as plain
+  Markdown; the bump pull request's `catalog-check` proves it matches the engine. Both jobs lock with `--no-build`.
 - The `image` job in `ci.yml` checks that the built image runs the Python that `infrastructure/docker/versions.env`
   names as `BASE_PYTHON_VERSION`, so a base digest that is not that Python fails the pull request
   ([saulpatinojr/HCW-HybridCloudWorks#1386](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1386)).

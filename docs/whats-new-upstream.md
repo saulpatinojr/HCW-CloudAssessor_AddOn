@@ -70,10 +70,14 @@ What happens next, on GitHub:
 Steps 1 to 4 run in two jobs, so the new engine's code never shares a runner with the App's key. The `bump` job does
 the bump, the catalog page and the compatibility check with no secret (a read-only `GITHUB_TOKEN` reaches only the
 step that asks for the latest release, which runs no project code), and uploads the changed files, the list of deleted
-paths and the outcome as an artifact. The `pull-request` job starts on a fresh runner from a clean checkout, runs no
-project code, refuses anything but the five bump paths (`pyproject.toml`, `uv.lock`, the Dockerfile, `.dockerignore`,
-`docs/rules/catalog.md`) and deletions of tracked files under `packages/cloud-assessor-core/`, applies them, and only
-then mints the App token and opens the pull request. The outcome counts as untrusted: it picks the label and the
+paths and the outcome as an artifact. The `pull-request` job starts on a fresh runner from a clean checkout and runs
+none of the engine's code. It regenerates the bump itself with main's own `scripts/adopt_core_wheel.py` and
+`uv lock --no-build` (which reads metadata only and builds nothing), and refuses the artifact unless its
+`pyproject.toml`, `uv.lock`, Dockerfile, `.dockerignore` and deletions are byte-identical to what it produced. The one
+file it takes from the artifact is `docs/rules/catalog.md`, because generating it needs the engine, and only as plain
+Markdown (UTF-8 text, no control characters, no HTML, at most 256 KiB, starting with its heading); the bump pull
+request's own `catalog-check` job, which holds no secret, then proves it matches the engine. Only then does the job
+mint the App token and open the pull request. The outcome counts as untrusted: it picks the label and the
 title, and auto-merge also needs `CORE_AUTOMERGE`. Both tags are refused unless they are `v<major>.<minor>.<patch>`
 (the pin may also be `v<version>-seed`), and later bumps move the pin with an exact replacement
 (`adopt_core_wheel.py --bump`), not a `sed` script, so a hostile tag cannot run a command.

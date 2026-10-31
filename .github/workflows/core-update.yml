@@ -20,8 +20,9 @@
 # Two jobs, so the upstream code never shares a runner with the App's key. `bump` runs this repository's scripts and
 # the new engine's code (the bump, the compatibility check, the catalog page) with no secret and a read-only
 # GITHUB_TOKEN, and hands its result over as an artifact: the changed bump files, the list of deleted paths and the
-# outcome. `pull-request` starts on a fresh runner from a clean checkout, runs no project code, accepts only the five
-# bump paths and deletions under packages/cloud-assessor-core/, applies them, and only then mints the App token.
+# outcome. `pull-request` starts on a fresh runner from a clean checkout, regenerates the bump with main's own
+# scripts/adopt_core_wheel.py and `uv lock --no-build` (no engine code), refuses an artifact that differs from that, takes
+# only docs/rules/catalog.md from it (as plain Markdown), and only then mints the App token.
 # A step in the same job could reach later steps (through $GITHUB_ENV, or by rewriting a downloaded action), which is
 # why the split matters. The outcome is untrusted: it picks the label and the title, and auto-merge also needs the
 # repository variable CORE_AUTOMERGE; the merge itself still waits for the required checks on the pull request.
@@ -117,13 +118,13 @@ jobs:
               # First adoption: from the local seed to the release wheel (see the header).
               python scripts/adopt_core_wheel.py --tag "$LATEST"
               git rm -r -q packages/cloud-assessor-core
-              uv lock
+              uv lock --no-build
               ;;
             *)
               # One line carries the release tag, the wheel file name and the CORE_REF marker; all move together. An exact
               # string replacement (no sed script), built from the two validated tags.
               python scripts/adopt_core_wheel.py --bump --from "$CURRENT" --tag "$LATEST"
-              uv lock --upgrade-package cloud-assessor-core
+              uv lock --no-build --upgrade-package cloud-assessor-core
               ;;
           esac
           grep -q "CORE_REF ${LATEST}" pyproject.toml
@@ -172,11 +173,14 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Job 2 of 2. A fresh runner with a clean checkout of the same commit. It runs no project code: it checks the
-  # artifact, applies it, and only then mints the App token and opens the pull request. Everything in the artifact
-  # came from job 1, which ran upstream code, so it is untrusted: only the five paths and deletions under the seed are
-  # accepted, and the outcome only chooses the label and the title. Auto-merge also needs the repository variable
-  # CORE_AUTOMERGE, and the merge itself waits for the required checks on the pull request.
+  # Job 2 of 2. A fresh runner with a clean checkout of the same commit. It runs none of the new engine's code and
+  # none of this repository's code except scripts/adopt_core_wheel.py (from this checkout, i.e. main) and `uv lock`.
+  # It does not trust the artifact: it regenerates the bump itself and refuses the artifact unless its pyproject.toml,
+  # uv.lock, Dockerfile, .dockerignore and deletions are byte-identical to what it produced. The one file it takes
+  # from the artifact is docs/rules/catalog.md (generating it needs the engine), and only as plain Markdown; the bump
+  # pull request's own CI (`catalog-check`, no secrets) proves it matches the engine. The outcome only picks the label
+  # and the title. Auto-merge also needs the repository variable CORE_AUTOMERGE, and the merge itself waits for the
+  # required checks on the pull request.
   pull-request:
     needs: bump
     if: needs.bump.outputs.changed == 'true' || inputs.probe
@@ -194,38 +198,74 @@ jobs:
           name: core-bump
           path: ${{ runner.temp }}/bump
       - if: needs.bump.outputs.changed == 'true' && !inputs.probe
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with: { python-version: "3.14" }
+      # The same uv as the bump job, verified by its sha256 (the manylinux x86_64 wheel of uv 0.11.32 on PyPI). When
+      # UV_VERSION moves, this hash moves with it (tests/security/test_core_update_app_token.py checks the version).
+      - if: needs.bump.outputs.changed == 'true' && !inputs.probe
+        name: uv, hash-checked
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'uv==0.11.32 --hash=sha256:3da76cd4e2697de30928b8a8524bd39183ac1e08cb7e72833807c022b7cba6c4' > "${RUNNER_TEMP}/uv-requirements.txt"
+          python -m pip install --require-hashes --no-deps -r "${RUNNER_TEMP}/uv-requirements.txt"
+      - if: needs.bump.outputs.changed == 'true' && !inputs.probe
         id: apply
-        name: Check the bump artifact and apply it (only the five paths, deletions under the seed only)
+        name: Regenerate the bump here and refuse an artifact that differs
         env: { LATEST: "${{ needs.bump.outputs.latest }}", CURRENT: "${{ needs.bump.outputs.current }}" }
         run: |
           set -euo pipefail
           dir="${RUNNER_TEMP}/bump"
-          allowed='^(pyproject\.toml|uv\.lock|infrastructure/docker/Dockerfile|\.dockerignore|docs/rules/catalog\.md)$'
-          [[ "$LATEST" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::the upstream tag is not v<major>.<minor>.<patch>"; exit 1; }
-          [[ "$CURRENT" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-seed)?$ ]] || { echo "::error::the pinned CORE_REF is malformed"; exit 1; }
-          [ -d "$dir/files" ] && [ -f "$dir/deleted.txt" ] && [ -f "$dir/outcome.txt" ] || { echo "::error::the artifact is incomplete"; exit 1; }
-          if [ -n "$(find "$dir" ! -type f ! -type d -print -quit)" ]; then echo "::error::the artifact holds a link or a special file"; exit 1; fi
-          bad=0
+          refuse() { echo "::error::$1"; git reset -q --hard HEAD; exit 1; }
+          [[ "$LATEST" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || refuse "the upstream tag is not v<major>.<minor>.<patch>"
+          [[ "$CURRENT" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-seed)?$ ]] || refuse "the pinned CORE_REF is malformed"
+          [ -d "$dir/files" ] && [ -f "$dir/deleted.txt" ] && [ -f "$dir/outcome.txt" ] || refuse "the artifact is incomplete"
+          [ -z "$(find "$dir" ! -type f ! -type d -print -quit)" ] || refuse "the artifact holds a link or a special file"
           while IFS= read -r entry; do
-            case "$entry" in files|deleted.txt|outcome.txt) ;; *) echo "::error::unexpected entry in the artifact: ${entry}"; bad=1 ;; esac
+            case "$entry" in files|deleted.txt|outcome.txt) ;; *) refuse "unexpected entry in the artifact: ${entry}" ;; esac
           done < <(ls -A "$dir")
+          allowed='^(pyproject\.toml|uv\.lock|infrastructure/docker/Dockerfile|\.dockerignore|docs/rules/catalog\.md)$'
           while IFS= read -r rel; do
-            [[ "$rel" =~ $allowed ]] || { echo "::error::the artifact carries a file outside the bump's paths: ${rel}"; bad=1; }
+            [[ "$rel" =~ $allowed ]] || refuse "the artifact carries a file outside the bump's paths: ${rel}"
           done < <(cd "$dir/files" && find . -type f | sed 's|^\./||')
-          while IFS= read -r path; do
-            if [[ "$path" =~ ^packages/cloud-assessor-core/[A-Za-z0-9._/-]+$ && "$path" != *..* ]] && git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then continue; fi
-            echo "::error::a deletion outside the seed, or of an untracked path: ${path}"; bad=1
-          done < "$dir/deleted.txt"
           outcome="$(head -c 16 "$dir/outcome.txt" | tr -d '\n')"
-          case "$outcome" in success|failure) ;; *) echo "::error::the outcome is neither success nor failure"; bad=1 ;; esac
-          [ "$bad" = 0 ] || exit 1
-          while IFS= read -r rel; do cp -- "$dir/files/$rel" "$rel"; done < <(cd "$dir/files" && find . -type f | sed 's|^\./||')
-          while IFS= read -r path; do git rm -q -- "$path"; done < "$dir/deleted.txt"
-          # What create-pull-request will commit: the five paths, and deletions under the seed. Nothing else.
+          case "$outcome" in success|failure) ;; *) refuse "the outcome is neither success nor failure" ;; esac
+          # Regenerate with this checkout's own code. `uv lock --no-build` reads this project's static pyproject.toml
+          # and the wheel's METADATA file; it builds nothing and imports nothing from the wheel, so no engine code runs.
+          # (Should uv ever need this project's build backend, hatchling, to read its metadata, --no-build makes it fail
+          # rather than build; building main's own project would be main's trusted code in any case.)
+          case "$CURRENT" in
+            *-seed)
+              python scripts/adopt_core_wheel.py --tag "$LATEST" || refuse "the first adoption does not apply to main"
+              git rm -r -q packages/cloud-assessor-core || refuse "the seed is not in main"
+              uv lock --no-build || refuse "uv lock failed"
+              ;;
+            *)
+              python scripts/adopt_core_wheel.py --bump --from "$CURRENT" --tag "$LATEST" || refuse "the bump does not apply to main"
+              uv lock --no-build --upgrade-package cloud-assessor-core || refuse "uv lock failed"
+              ;;
+          esac
+          for path in pyproject.toml uv.lock infrastructure/docker/Dockerfile .dockerignore; do
+            if git diff --quiet HEAD -- "$path"; then
+              [ ! -e "$dir/files/$path" ] || refuse "the artifact changes ${path}, which the bump leaves alone"
+            else
+              cmp -s -- "$path" "$dir/files/$path" || refuse "${path} in the artifact differs from the one regenerated here"
+            fi
+          done
+          cmp -s <(git diff --cached --name-only --diff-filter=D HEAD | LC_ALL=C sort) <(LC_ALL=C sort "$dir/deleted.txt") \
+            || refuse "the artifact's deletions differ from the ones regenerated here"
+          # docs/rules/catalog.md: plain Markdown only (UTF-8 text, no control characters, no HTML, at most 256 KiB).
+          cat="$dir/files/docs/rules/catalog.md"
+          if [ -e "$cat" ]; then
+            [ "$(stat -c %s "$cat")" -le 262144 ] || refuse "catalog.md is larger than 256 KiB"
+            iconv -f UTF-8 -t UTF-8 "$cat" > /dev/null 2>&1 || refuse "catalog.md is not UTF-8 text"
+            ! tr -d '\t\n' < "$cat" | LC_ALL=C grep -q '[[:cntrl:]]' || refuse "catalog.md holds control characters"
+            ! grep -qE '<[A-Za-z!/?]' "$cat" || refuse "catalog.md holds HTML"
+            [ "$(head -n 1 "$cat")" = "# Criteria catalog" ] || refuse "catalog.md does not start with its heading"
+            cp -- "$cat" docs/rules/catalog.md
+          fi
           while IFS= read -r path; do
-            [[ "$path" =~ $allowed || "$path" == packages/cloud-assessor-core/* ]] || { echo "::error::unexpected change: ${path}"; bad=1; }
+            [[ "$path" =~ $allowed || "$path" == packages/cloud-assessor-core/* ]] || refuse "unexpected change: ${path}"
           done < <(git diff --cached --name-only; git diff --name-only; git ls-files --others --exclude-standard)
-          [ "$bad" = 0 ] || exit 1
           git --no-pager diff --cached --stat HEAD
           git --no-pager diff --stat
           # Untrusted (job 1 ran upstream code): used for the label and the title only.

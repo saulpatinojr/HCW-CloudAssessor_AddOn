@@ -127,18 +127,37 @@ def test_the_job_that_runs_project_code_holds_no_secret_but_a_read_only_token_fo
     assert not re.search(r"\b(uv|python|npx|npm|pytest)\b", with_token[0].split("run: |", 1)[1])
 
 
-def test_the_job_that_holds_the_key_runs_no_project_code():
+def _commands(job: str) -> str:
+    """Every shell script of a job (the `run:` values), without comments and quoted messages."""
+    blocks = re.findall(r"(?ms)^ {8}run: (?:\|\n(.*?)(?=^ {6}- |\Z)|(.*?)$)", job)
+    lines = [ln for block, line in blocks for ln in (block or line).splitlines() if not ln.strip().startswith("#")]
+    return re.sub(r"'[^'\n]*'|\"[^\"\n]*\"", '""', "\n".join(lines))
+
+
+def test_the_job_that_holds_the_key_runs_no_engine_code_and_only_mains_bump_script():
     pr = JOB_TEXT["pull-request"]
     assert re.search(r"(?m)^ {4}needs:\s*bump\s*$", pr)
-    # Every shell script of the job (the `run:` values); the pull request body may name files such as uv.lock.
-    blocks = re.findall(r"(?ms)^ {8}run: (?:\|\n(.*?)(?=^ {6}- |\Z)|(.*?)$)", pr)
-    scripts = "\n".join(block or line for block, line in blocks)
+    scripts = _commands(pr)
     assert "git rm" in scripts and "gh pr merge" in scripts, "the run blocks were not found"
-    for word in (r"\buv\s", r"\bpython3?\s", r"\bpytest\b", r"\bnpx\s", r"\bnpm\s", r"\bmake\s", r"scripts/"):
-        assert not re.search(word, scripts), f"the pull-request job must not run project code ({word})"
+    # uv only to lock, never to build, sync or run; python only for main's bump script and the hashed uv install.
+    assert set(re.findall(r"\buv\s+(\S+)", scripts)) == {"lock"}
+    for line in scripts.splitlines():
+        if re.search(r"\buv\s+lock\b", line):
+            assert "--no-build" in line, line
+    assert set(re.findall(r"\bpython3?\s+(\S+)", scripts)) == {"scripts/adopt_core_wheel.py", "-m"}
+    assert re.findall(r"\bpython3?\s+-m\s+(\S+\s+\S+\s+\S+)", scripts) == ["pip install --require-hashes"]
+    assert set(re.findall(r"scripts/\S+", scripts)) == {"scripts/adopt_core_wheel.py"}
+    for word in (r"\bpytest\b", r"\bnpx\s", r"\bnpm\s", r"\bmake\s", r"\bpip\s+install\s+(?!--require-hashes)"):
+        assert not re.search(word, scripts), f"the pull-request job must not run project or engine code ({word})"
     apply = _only_in(pr, "id: apply")
     app = _only("actions/create-github-app-token")
     assert STEPS.index(apply) < STEPS.index(app), "the artifact must be checked and applied before the token is minted"
+
+
+def test_the_pull_request_job_installs_the_same_uv_as_the_bump_job_by_hash():
+    version = re.findall(r'"uv==([0-9.]+)"', JOB_TEXT["bump"])
+    hashed = re.findall(r"uv==([0-9.]+) --hash=sha256:[0-9a-f]{64}\b", JOB_TEXT["pull-request"])
+    assert len(version) == 1 and hashed == version, "move the uv hash in the pull-request job with UV_VERSION"
 
 
 def test_the_untrusted_outcome_alone_never_turns_on_auto_merge():
