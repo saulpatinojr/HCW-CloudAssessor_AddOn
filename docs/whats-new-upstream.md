@@ -63,16 +63,28 @@ What happens next, on GitHub:
    The sha256 to expect is `6c5564ba0bc82c79060704dd52871e56b51b709c9ee8bdd7b6b7cf0409ca26e7` (see the table).
 3. `docs/rules/catalog.md` is regenerated from catalog `1.1.0` (12 lines change: the version line, and the checks and
    texts of `CA-FIN-002`, `CA-FIN-003` and `CA-FIN-007`).
-4. The compatibility check in the same run (lint, catalog, tests, Playwright) decides the label. It is expected to be
-   `compatible`, so with the repository variable `CORE_AUTOMERGE` set to `true` the run asks GitHub to auto-merge it,
-   and the merge happens once the required checks of the `main` rules pass on the pull request.
+4. The compatibility check (lint, catalog, tests, Playwright) decides the label. It is expected to be `compatible`, so
+   with the repository variable `CORE_AUTOMERGE` set to `true` the run asks GitHub to auto-merge it, and the merge
+   happens once the required checks of the `main` rules pass on the pull request.
+
+Steps 1 to 4 run in two jobs, so the new engine's code never shares a runner with the App's key. The `bump` job does
+the bump, the catalog page and the compatibility check with no secret (a read-only `GITHUB_TOKEN` reaches only the
+step that asks for the latest release, which runs no project code), and uploads the changed files, the list of deleted
+paths and the outcome as an artifact. The `pull-request` job starts on a fresh runner from a clean checkout, runs no
+project code, refuses anything but the five bump paths (`pyproject.toml`, `uv.lock`, the Dockerfile, `.dockerignore`,
+`docs/rules/catalog.md`) and deletions of tracked files under `packages/cloud-assessor-core/`, applies them, and only
+then mints the App token and opens the pull request. The outcome counts as untrusted: it picks the label and the
+title, and auto-merge also needs `CORE_AUTOMERGE`. Both tags are refused unless they are `v<major>.<minor>.<patch>`
+(the pin may also be `v<version>-seed`), and later bumps move the pin with an exact replacement
+(`adopt_core_wheel.py --bump`), not a `sed` script, so a hostile tag cannot run a command.
 
 What was prepared in this repository so that pull request passes without touching a workflow (the App token cannot
 change files under `.github/workflows`):
 
 - `scripts/check-catalog.py` reads the catalog the installed engine loads, so it works with the seed's `catalog/` and
-  with the wheel's `catalog_data`; it now prints the new `cost-evidence` checks properly, and `--write-schema` refuses to
-  write into an installed release.
+  with the wheel's `catalog_data`; it now prints the new `cost-evidence` checks properly, and `--write-schema` writes only
+  the seed's catalog under `packages/` and refuses an installed release (in `site-packages`, even inside this
+  repository's `.venv`).
 - `tests/unit/test_api.py` compares the health route's catalog version with the installed catalog's (`1.0.0` now,
   `1.1.0` after), instead of a fixed `1.0.0`.
 - `tests/security/test_edition_boundary.py` scans the installed engine's files wherever they are (it also reads the
@@ -82,9 +94,13 @@ change files under `.github/workflows`):
 - `security.yml` exports the audit set with `--no-emit-package cloud-assessor-core`: `pip-audit --strict` fails on a
   package it cannot find on PyPI, and the engine wheel is not on PyPI (the seed was left out by `--no-emit-workspace`
   for the same reason).
-- `ci.yml` and the `Makefile` pass `--cov=packages` only while `packages/` exists.
-- `tests/unit/test_adopt_core_wheel.py` runs the script and the workflow's own `grep` and `sed` lines against copies of
-  the real files in every pull request, so a later edit that would break the exact matches fails here first.
+- `ci.yml` and the `Makefile` pass `--cov=packages` only while `packages/cloud-assessor-core/pyproject.toml` exists (a
+  tracked file, not the folder: ignored `__pycache__` folders keep `packages/` alive in a working copy after a pull).
+- `tests/unit/test_adopt_core_wheel.py` runs the script and the workflow's own steps (the tag check, the bump, the
+  artifact check of the `pull-request` job) against copies of the real files and against hostile tags and tampered
+  artifacts, in every pull request, so a later edit that would break them fails here first.
+- `tests/security/test_edition_boundary.py` forbids the engine, wherever it is installed, to import a network module
+  (`urllib.request`, `http.client`, `socket`, `ssl`, `httpx`, `requests`, `aiohttp`), since it now comes from outside.
 
 Left for after the adoption merges (documents only): `README.md`'s layout table and diagram, `.github/CODEOWNERS`,
 `.github/pull_request_template.md`, `NOTICE` and `SECURITY.md` still name `packages/cloud-assessor-core`; the table

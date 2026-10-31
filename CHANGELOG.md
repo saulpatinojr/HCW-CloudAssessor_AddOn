@@ -23,9 +23,20 @@ All notable changes to this repository are recorded here. The format follows Kee
   scan the engine wherever it is installed and check its declared requirements; `pyproject.toml` allows a direct
   (URL) reference, which hatchling otherwise refuses; `security.yml` leaves the engine out of `pip-audit`, which cannot
   find it on PyPI (`--strict` would fail, checked locally), as the seed already was; `ci.yml` and the `Makefile`
-  measure `packages/` only while it exists. `tests/unit/test_adopt_core_wheel.py` runs the script and the workflow's
-  `grep` and `sed` lines against copies of the real files. `repository.manifest.json` no longer lists seed files, and
-  the `ruff.toml` ignore for the seed's tests is gone (it ignored a rule that is not selected).
+  measure `packages/` only while the seed's tracked `pyproject.toml` exists. `tests/unit/test_adopt_core_wheel.py` runs
+  the script and the workflow's own steps against copies of the real files. `repository.manifest.json` no longer lists
+  seed files, and the `ruff.toml` ignore for the seed's tests is gone (it ignored a rule that is not selected).
+- `core-update.yml` is split into two jobs after an independent review. `bump` runs this repository's scripts and the
+  new engine's code with no secret and uploads the result as an artifact; `pull-request` runs no project code, accepts
+  only the five bump paths and deletions under the seed, applies them, and only then mints the GitHub App token. Before,
+  upstream code ran in the same job that later received the App's key, and a step can reach later steps of its job.
+  The compatibility outcome now only picks the label and title; auto-merge also needs `CORE_AUTOMERGE`. Both tags must
+  be `v<major>.<minor>.<patch>` before anything is written to the step outputs, and later bumps move the pin with an
+  exact replacement (`scripts/adopt_core_wheel.py --bump`) instead of a `sed` script, which a crafted tag could have
+  turned into a shell command through GNU sed's `e` flag. `scripts/check-catalog.py --write-schema` writes only the
+  seed's catalog (the in-project `.venv` is inside the repository, so it had written into an installed release). The
+  edition-boundary tests forbid the engine to import a network module, and the health test reads the catalog version
+  from `criteria.json` directly instead of through the loader the route itself uses.
 - The `image` job in `ci.yml` checks that the built image runs the Python that `infrastructure/docker/versions.env`
   names as `BASE_PYTHON_VERSION`, so a base digest that is not that Python fails the pull request
   ([saulpatinojr/HCW-HybridCloudWorks#1386](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1386)).

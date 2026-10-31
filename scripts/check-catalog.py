@@ -7,7 +7,8 @@ uv run python scripts/check-catalog.py --doc           # print docs/rules/catalo
 
 The catalog is the one the installed engine loads (cloud_assessor_core.catalog.loader.catalog_dir): the seed's
 catalog/ while the engine is the local seed, the wheel's catalog_data once it is the upstream release. --write-schema
-only writes inside this repository; the release's catalog is owned upstream (HCW-CloudAssessor_App) and changed there.
+writes only the seed's catalog under packages/ and refuses an installed release (in site-packages, even inside this
+repository's .venv): that catalog is owned upstream (HCW-CloudAssessor_App) and changed there.
 """
 
 from __future__ import annotations
@@ -27,7 +28,8 @@ CATALOG_DIR = catalog_dir()
 
 
 def write_schema() -> None:
-    if not CATALOG_DIR.resolve().is_relative_to(ROOT):
+    # Only the seed's own catalog/ may be written: the in-project .venv is inside ROOT too, so ROOT is not enough.
+    if not CATALOG_DIR.resolve().is_relative_to(ROOT / "packages") or "site-packages" in CATALOG_DIR.parts:
         print(
             f"ERROR: the catalog at {CATALOG_DIR} belongs to the installed engine release; change it upstream",
             file=sys.stderr,

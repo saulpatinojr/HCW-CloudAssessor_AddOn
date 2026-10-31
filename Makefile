@@ -11,7 +11,7 @@ lint:
 	uv run python scripts/check-catalog.py
 
 test:
-	uv run pytest -q $(if $(wildcard packages),--cov=packages) --cov=src --cov-report=term-missing
+	uv run pytest -q $(if $(wildcard packages/cloud-assessor-core/pyproject.toml),--cov=packages) --cov=src --cov-report=term-missing
 
 run:
 	CA_ALLOW_NO_TURNSTILE=1 PORT=8080 uv run python -m cloud_assessment_lab

@@ -3,6 +3,27 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-10-31, second round (review fixes: two-job split, tag check, exact bump)
+
+Same toolchain as the run below. After an independent review of pull request 67 (head `36251c8`). The wheel was again
+built from the App's tag `v0.2.1` and served on `127.0.0.1` for the simulation.
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| `uv sync --all-packages`, `uv run ruff check . && uv run ruff format --check .` | yes | clean (90 files) |
+| `uv run python scripts/check-catalog.py`, `--doc` drift, `uv lock --check` | yes | catalog 1.0.0, 25 criteria; no drift; exit 0 |
+| `uv run pytest -q --cov=packages --cov=src` | yes | 396 passed, coverage 98.12% (gate 85) |
+| The refs step's script as written, fed hostile tags through `inputs.ref` and through a stand-in `gh` (`v9\|;etouch${IFS}PWNED;#`, a tag with a newline, `v1.0`, `v1.0.0-rc.1`, and others) | yes (in the tests) | each refused with exit 1, nothing written to `GITHUB_OUTPUT`, no `PWNED` file; a plain `v99.0.0` passes |
+| `adopt_core_wheel.py --bump` with the same hostile tags | yes (in the tests) | refused, `pyproject.toml` unchanged; a plain bump moves the URL and the marker |
+| The `pull-request` job's apply step as written, against a stand-in checkout and artifact | yes (in the tests) | takes the expected bump; refuses an extra file, a deletion outside the seed, a `..` path, a deletion of an untracked path, a symbolic link, an extra artifact entry, a malformed or missing outcome and a malformed tag, each with the checkout left unchanged |
+| A step that runs project code added to the `pull-request` job | yes (a temporary edit, reverted) | `test_the_job_that_holds_the_key_runs_no_project_code` fails |
+| `import socket` appended to the installed engine (the `0.2.1` wheel in the simulation's `.venv`, reverted after) | yes | `test_the_engine_opens_no_network_connection` fails with `paths.py: socket`; passes again once removed |
+| `check-catalog.py --write-schema` with the wheel installed in the in-project `.venv` | yes | exit 1, "belongs to the installed engine release"; the installed `schema.json` is untouched. With the seed it rewrites the seed's file with no change |
+| Simulation, both jobs: the bump by hand, then the `bump` job's collect step, then the `pull-request` job's apply step in a fresh clone | yes | the artifact holds the five files, 39 deletions and `success`; the applied clone is identical to the `bump` job's tree (outside ignored folders) |
+| Simulation: the applied clone with an ignored `__pycache__` left under `packages/cloud-assessor-core` | yes | coverage flags pick `--cov=src` only (`ci.yml` and `make -n test`); ruff, catalog 1.1.0, drift, `uv lock --check` clean; pytest 311 passed, 9 skipped, 1 failed (the bump test, only because the simulated URL is `127.0.0.1`; with the release URL form, 120 of 120 run tests pass in the touched files); Playwright 4 passed; `pip-audit --strict` on the `security.yml` export: no known vulnerabilities |
+| actionlint | **no** | not re-run (running a downloaded linter was not allowed in this session) |
+| The two jobs on GitHub, the artifact hand-over, the bump pull request and auto-merge | **no** | GitHub only, after merge |
+
 ## Run 2026-10-31 (adoption of engine `v0.2.1` handed to `core-update.yml`)
 
 Toolchain: Python 3.14.6 (`.python-version`), uv 0.11.32 (the version CI uses), Docker 29.9.2 with a daemon, Playwright
