@@ -63,9 +63,10 @@ What happens next, on GitHub:
    The sha256 to expect is `6c5564ba0bc82c79060704dd52871e56b51b709c9ee8bdd7b6b7cf0409ca26e7` (see the table).
 3. `docs/rules/catalog.md` is regenerated from catalog `1.1.0` (12 lines change: the version line, and the checks and
    texts of `CA-FIN-002`, `CA-FIN-003` and `CA-FIN-007`).
-4. The compatibility check (lint, catalog, tests, Playwright) decides the label. It is expected to be `compatible`, so
-   with the repository variable `CORE_AUTOMERGE` set to `true` the run asks GitHub to auto-merge it, and the merge
-   happens once the required checks of the `main` rules pass on the pull request.
+4. The compatibility check (lint, catalog, tests, Playwright) decides the label. It is expected to be `compatible`.
+   With the repository variable `CORE_AUTOMERGE` set to `true` the run asks GitHub to auto-merge the pull request
+   whatever the label says, and the merge happens only once the required checks of the `main` rules pass on the pull
+   request; the label is a hint, never the gate.
 
 Steps 1 to 4 run in two jobs, so the new engine's code never shares a runner with the App's key. The `bump` job does
 the bump, the catalog page and the compatibility check with no secret (a read-only `GITHUB_TOKEN` reaches only the
@@ -77,8 +78,10 @@ none of the engine's code. It regenerates the bump itself with main's own `scrip
 file it takes from the artifact is `docs/rules/catalog.md`, because generating it needs the engine, and only as plain
 Markdown (UTF-8 text, no control characters, no HTML, at most 256 KiB, starting with its heading); the bump pull
 request's own `catalog-check` job, which holds no secret, then proves it matches the engine. Only then does the job
-mint the App token and open the pull request. The outcome counts as untrusted: it picks the label and the
-title, and auto-merge also needs `CORE_AUTOMERGE`. Both tags are refused unless they are `v<major>.<minor>.<patch>`
+mint the App token and open the pull request. The outcome counts as untrusted: it picks the label, the title and the
+body text, and auto-merge never reads it (it needs `CORE_AUTOMERGE` and the byte-for-byte check, then the required
+checks). The workflow runs from `main` only: a manual run started on another branch stops at the first step of each
+job with an error naming the branch. Both tags are refused unless they are `v<major>.<minor>.<patch>`
 (the pin may also be `v<version>-seed`), and later bumps move the pin with an exact replacement
 (`adopt_core_wheel.py --bump`), not a `sed` script, so a hostile tag cannot run a command.
 
