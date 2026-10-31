@@ -6,10 +6,9 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.14.6,<3.15"
 dependencies = [
-  # The engine. Until the first adoption it is the local seed (packages/cloud-assessor-core, a workspace member) and
-  # the marker below names the seed; core-update.yml reads it, and its first run after a newer upstream release
-  # replaces this line with the release wheel by URL (scripts/adopt_core_wheel.py), deletes the seed and re-locks.
-  "cloud-assessor-core",  # CORE_REF v0.1.0-seed
+  # The engine: the upstream release wheel, by URL (uv.lock holds its sha256). core-update.yml moves this line
+  # to each newer release and re-locks; do not edit it by hand.
+  "cloud-assessor-core @ https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.0/cloud_assessor_core-0.3.0-py3-none-any.whl",  # CORE_REF v0.3.0
   "fastapi==0.162.0",
   "uvicorn==0.54.0",
   "pydantic==2.14.1",
@@ -36,14 +35,8 @@ packages = ["src/cloud_assessment_lab"]
 [tool.hatch.metadata]
 allow-direct-references = true
 
-[tool.uv]
-workspace = { members = ["packages/cloud-assessor-core"] }
-
-[tool.uv.sources]
-cloud-assessor-core = { workspace = true }
-
 [tool.pytest.ini_options]
-testpaths = ["tests", "packages/cloud-assessor-core/tests"]
+testpaths = ["tests"]
 addopts = "-ra"
 filterwarnings = [
   "error::DeprecationWarning:cloud_assessor_core",
@@ -53,7 +46,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["packages/cloud-assessor-core/src", "src"]
+source = ["src"]
 branch = true
 
 [tool.coverage.report]

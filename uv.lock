@@ -1,12 +1,6 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.14.6, <3.15"
-
-[manifest]
-members = [
-    "cloud-assessment-lab",
-    "cloud-assessor-core",
-]
 
 [[package]]
 name = "annotated-doc"
@@ -168,7 +162,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cloud-assessor-core", editable = "packages/cloud-assessor-core" },
+    { name = "cloud-assessor-core", url = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.0/cloud_assessor_core-0.3.0-py3-none-any.whl" },
     { name = "fastapi", specifier = "==0.162.0" },
     { name = "pydantic", specifier = "==2.14.1" },
     { name = "uvicorn", specifier = "==0.54.0" },
@@ -185,10 +179,13 @@ dev = [
 
 [[package]]
 name = "cloud-assessor-core"
-version = "0.1.0"
-source = { editable = "packages/cloud-assessor-core" }
+version = "0.3.0"
+source = { url = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.0/cloud_assessor_core-0.3.0-py3-none-any.whl" }
 dependencies = [
     { name = "pydantic" },
+]
+wheels = [
+    { url = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.0/cloud_assessor_core-0.3.0-py3-none-any.whl", hash = "sha256:432fdcd1c739450e44028ea861fdbd2b89c1d730910bba2669bdb501321708b8" },
 ]
 
 [package.metadata]
