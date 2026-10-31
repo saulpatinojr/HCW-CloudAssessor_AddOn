@@ -4,6 +4,29 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+### Security
+- `core-update.yml` now runs from `main` only, and auto-merge no longer listens to the `bump` job's report. These are
+  two High findings from a review of the same two-job workflow in the MigrateOrchestrator add-on
+  ([its pull request 57](https://github.com/saulpatinojr/HCW-MigrateOrchestrator_AddOn/pull/57#discussion_r4430793870)),
+  and they apply here as merged in pull request 67.
+  - Main only. A person with write access could start the workflow by hand on another branch
+    (`gh workflow run --ref <branch>`), and the `pull-request` job would then run that branch's
+    `scripts/adopt_core_wheel.py` before minting the App token. Now the first step of each job stops the run with an
+    error that names the branch unless it was started on `refs/heads/main`, the `pull-request` job's `if:` also
+    requires `main`, and both checkouts take the exact commit the run was started for (`github.sha`).
+    `create-pull-request` is told `base: main`, which it needs when the checkout is a commit. The `bump` job has no
+    job-level `if:` on purpose, so a refused run shows as failed rather than skipped.
+  - Auto-merge. The outcome file comes from the job that ran upstream code, so a compromised release could rewrite it
+    to `success`. Auto-merge now needs the repository variable `CORE_AUTOMERGE` to be `true`, a run that is not a
+    probe, and the `pull-request` job's own byte-for-byte check; it never reads the outcome. GitHub merges only after
+    the "Protect main" ruleset's required checks (`lint`, `test`, `image`, `package`, `e2e`, `catalog-check`,
+    `pip-audit`, `secret-scan`, `dependency-review`) pass on the bump pull request itself. The outcome still picks the
+    label, the title and the body text, so when `CORE_AUTOMERGE` is `true` a `needs-adaptation` bump also has
+    auto-merge turned on and merges once its checks pass (normally after someone fixes it on its branch); select
+    **Disable auto-merge** on the pull request to hold one.
+  - `tests/security/test_core_update_app_token.py` checks both guards; `docs/whats-new-upstream.md` says the same. Not
+    run on GitHub yet; see `VALIDATION.md`.
+
 ### Changed
 
 - The engine update to `v0.2.1` is now set up to happen by itself. The engine (`cloud-assessor-core`) is written in
