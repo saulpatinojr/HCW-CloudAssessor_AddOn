@@ -10,7 +10,7 @@ All notable changes to this repository are recorded here. The format follows Kee
   ([its pull request 57](https://github.com/saulpatinojr/HCW-MigrateOrchestrator_AddOn/pull/57#discussion_r4430793870)),
   and they apply here as merged in pull request 67.
   - Main only. A person with write access could start the workflow by hand on another branch
-    (`gh workflow run core-update.yml --ref` with any branch name other than `main`), and the `pull-request` job would
+    (a manual run of `core-update.yml` with `--ref` set to any branch other than `main`), and the `pull-request` job would
     then run that branch's
     `scripts/adopt_core_wheel.py` before minting the App token. Now the first step of each job stops the run with an
     error that names the branch unless it was started on `refs/heads/main`, the `pull-request` job's `if:` also
@@ -57,7 +57,7 @@ All notable changes to this repository are recorded here. The format follows Kee
   new engine's code with no secret and uploads the result as an artifact; `pull-request` runs no project code, accepts
   only the five bump paths and deletions under the seed, applies them, and only then mints the GitHub App token. Before,
   upstream code ran in the same job that later received the App's key, and a step can reach later steps of its job.
-  The compatibility outcome now only picks the label and title; auto-merge needs `CORE_AUTOMERGE` (and, since the
+  The compatibility outcome now picks the label, the title, the body text and the not-compatible warning; auto-merge needs `CORE_AUTOMERGE` (and, since the
   Security entry above, no longer reads the outcome). Both tags must
   be `v<major>.<minor>.<patch>` before anything is written to the step outputs, and later bumps move the pin with an
   exact replacement (`scripts/adopt_core_wheel.py --bump`) instead of a `sed` script, which a crafted tag could have
