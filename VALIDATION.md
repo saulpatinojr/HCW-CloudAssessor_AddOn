@@ -220,7 +220,8 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   revoked without touching the others) but it does not shrink what a stolen key can reach, because every key authenticates the
   same App, and that App is installed on all four add-on repositories. An environment limited to `main` would also stop the
   base-update proof, which needs a run from a branch.
-- Auto-merge of a compatible bump needs the repository setting "Allow auto-merge", which was off on 2026-10-26 (UTC) and has since been turned on.
+- Auto-merge of a bump (any bump since pull request 68; it then waits for the required checks) needs the repository
+  setting "Allow auto-merge", which was off on 2026-10-26 (UTC) and has since been turned on.
   With it off, `core-update` warns and leaves the pull request for a person to merge.
 - `base-update.yml` moves the base image pin to the website's pin by opening a pull request, with the same HCW Main Admin App credential as
   `core-update.yml` (so `core-update.yml`'s probe run also proves the credential here). It is covered by

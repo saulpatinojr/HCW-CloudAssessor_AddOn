@@ -10,7 +10,8 @@ All notable changes to this repository are recorded here. The format follows Kee
   ([its pull request 57](https://github.com/saulpatinojr/HCW-MigrateOrchestrator_AddOn/pull/57#discussion_r4430793870)),
   and they apply here as merged in pull request 67.
   - Main only. A person with write access could start the workflow by hand on another branch
-    (`gh workflow run --ref <branch>`), and the `pull-request` job would then run that branch's
+    (`gh workflow run core-update.yml --ref` with any branch name other than `main`), and the `pull-request` job would
+    then run that branch's
     `scripts/adopt_core_wheel.py` before minting the App token. Now the first step of each job stops the run with an
     error that names the branch unless it was started on `refs/heads/main`, the `pull-request` job's `if:` also
     requires `main`, and both checkouts take the exact commit the run was started for (`github.sha`).
@@ -24,8 +25,10 @@ All notable changes to this repository are recorded here. The format follows Kee
     label, the title and the body text, so when `CORE_AUTOMERGE` is `true` a `needs-adaptation` bump also has
     auto-merge turned on and merges once its checks pass (normally after someone fixes it on its branch); select
     **Disable auto-merge** on the pull request to hold one.
-  - `tests/security/test_core_update_app_token.py` checks both guards; `docs/whats-new-upstream.md` says the same. Not
-    run on GitHub yet; see `VALIDATION.md`.
+  - `tests/security/test_core_update_app_token.py` checks both guards. `docs/whats-new-upstream.md`, `VALIDATION.md`, a
+    dated note on the ADR-0028 copy and the workflow's own comments now say the same: only a bump whose required checks
+    pass merges, and the outcome picks only the label, the title, the body text and the not-compatible warning. Not run
+    on GitHub yet; see `VALIDATION.md`.
 
 ### Changed
 
@@ -36,7 +39,8 @@ All notable changes to this repository are recorded here. The format follows Kee
   `-seed` as the first adoption: `scripts/adopt_core_wheel.py` rewrites the line to the `v0.2.1` wheel's URL and removes
   the workspace entries and the Dockerfile and `.dockerignore` lines for the seed, `git rm -r` deletes the seed, and
   `uv lock` downloads the wheel and records its sha256 in `uv.lock`. The App's GitHub App token then opens the pull
-  request, so the required checks run on it, and with `CORE_AUTOMERGE=true` a compatible one is queued for auto-merge.
+  request, so the required checks run on it, and with `CORE_AUTOMERGE=true` it is queued for auto-merge, which waits
+  for those checks (since the Security entry above, for every bump, `compatible` or not).
   This is done by the workflow because the wheel's sha256 can only enter `uv.lock` through `uv lock`, which needs to
   download the release asset. Each bump now also regenerates `docs/rules/catalog.md`, so the drift check in `ci.yml`
   passes when a release changes the catalog. Refs saulpatinojr/HCW-MigrateOrchestrator_AddOn#50.
@@ -53,7 +57,8 @@ All notable changes to this repository are recorded here. The format follows Kee
   new engine's code with no secret and uploads the result as an artifact; `pull-request` runs no project code, accepts
   only the five bump paths and deletions under the seed, applies them, and only then mints the GitHub App token. Before,
   upstream code ran in the same job that later received the App's key, and a step can reach later steps of its job.
-  The compatibility outcome now only picks the label and title; auto-merge also needs `CORE_AUTOMERGE`. Both tags must
+  The compatibility outcome now only picks the label and title; auto-merge needs `CORE_AUTOMERGE` (and, since the
+  Security entry above, no longer reads the outcome). Both tags must
   be `v<major>.<minor>.<patch>` before anything is written to the step outputs, and later bumps move the pin with an
   exact replacement (`scripts/adopt_core_wheel.py --bump`) instead of a `sed` script, which a crafted tag could have
   turned into a shell command through GNU sed's `e` flag. `scripts/check-catalog.py --write-schema` writes only the
