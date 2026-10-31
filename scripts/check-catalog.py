@@ -4,6 +4,11 @@
 uv run python scripts/check-catalog.py                 # validate (CI)
 uv run python scripts/check-catalog.py --write-schema  # regenerate catalog/schema.json from the model
 uv run python scripts/check-catalog.py --doc           # print docs/rules/catalog.md (CI checks it for drift)
+
+The catalog is the one the installed engine loads (cloud_assessor_core.catalog.loader.catalog_dir): the seed's
+catalog/ while the engine is the local seed, the wheel's catalog_data once it is the upstream release. --write-schema
+writes only the seed's catalog under packages/ and refuses an installed release (in site-packages, even inside this
+repository's .venv): that catalog is owned upstream (HCW-CloudAssessor_App) and changed there.
 """
 
 from __future__ import annotations
@@ -14,14 +19,22 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG_DIR = ROOT / "packages" / "cloud-assessor-core" / "catalog"
 
-from cloud_assessor_core.catalog.loader import CatalogError, load_catalog, load_scoring  # noqa: E402
+from cloud_assessor_core.catalog.loader import CatalogError, catalog_dir, load_catalog, load_scoring  # noqa: E402
 from cloud_assessor_core.catalog.schema import schema_matches, schema_text  # noqa: E402
 from cloud_assessor_core.model import LEARN_URL_HOSTS  # noqa: E402
 
+CATALOG_DIR = catalog_dir()
+
 
 def write_schema() -> None:
+    # Only the seed's own catalog/ may be written: the in-project .venv is inside ROOT too, so ROOT is not enough.
+    if not CATALOG_DIR.resolve().is_relative_to(ROOT / "packages") or "site-packages" in CATALOG_DIR.parts:
+        print(
+            f"ERROR: the catalog at {CATALOG_DIR} belongs to the installed engine release; change it upstream",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     (CATALOG_DIR / "schema.json").write_text(schema_text(), encoding="utf-8")
     print(f"wrote {CATALOG_DIR / 'schema.json'}")
 
@@ -127,6 +140,9 @@ def _check_text(k) -> str:
         return f"`{k.path or 'sku.name'}` in {members} (missing: {k.missingIs})"
     if k.kind == "count-threshold":
         return f"{k.scope} {k.metric} of `{k.path}` {k.op} {k.value:g}"
+    if k.kind == "cost-evidence":  # engine 0.2.0 and later
+        limit = f" {k.op} {k.value:g}" if k.value is not None else ""
+        return f"cost-evidence {k.metric}{limit} (used only with Cost Management evidence; this edition has none)"
     return f"{k.relation} `{k.type}` (absent: {k.absentIs})"
 
 

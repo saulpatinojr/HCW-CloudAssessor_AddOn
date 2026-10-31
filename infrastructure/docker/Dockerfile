@@ -3,9 +3,12 @@
 # Two stages on one digest-pinned base (infrastructure/docker/versions.env; CI checks every FROM against it).
 #   build  exports the hash-pinned third-party set from uv.lock (`uv export --frozen`, with the uv CI uses, by
 #          digest; nothing resolves, and uv never reaches the lab stage), installs it into /install with
-#          pip --require-hashes --no-deps (nothing resolves beyond the lock), then places the two first-party
-#          packages (the engine and the lab application) beside them as source trees, so no build backend
-#          enters the image.
+#          pip --require-hashes --no-deps (nothing resolves beyond the lock), then places the lab application
+#          beside them as a source tree, so no build backend enters the image. While the engine is still the local
+#          seed (a workspace member, which the export leaves out), the two COPY lines just below the export
+#          place it the same way; the first core-update pull request deletes them (scripts/adopt_core_wheel.py), and
+#          from then on the engine is the upstream release wheel, pinned by URL and sha256 in uv.lock and installed
+#          by the same hash-checked pip step, with its catalog as cloud_assessor_core/catalog_data.
 #   lab    the runtime: apt upgrade, /install copied in, pip/ensurepip/setuptools removed, uid 10001, read-only
 #          friendly (writes nothing), HEALTHCHECK on /api/health through urllib, CMD python -m cloud_assessment_lab.
 #

@@ -11,8 +11,22 @@ from ..conftest import ROOT
 
 TEXT = (ROOT / ".github" / "workflows" / "core-update.yml").read_text(encoding="utf-8")
 JOBS = TEXT.split("\njobs:\n", 1)[1]
-STEPS = re.split(r"(?m)^ {6}- ", JOBS)[1:]  # the steps of the one job
+# The two jobs, by name: `bump` (runs project and upstream code, no secret) and `pull-request` (the App token).
+JOB_TEXT = dict(
+    zip(
+        re.findall(r"(?m)^ {2}([A-Za-z0-9_-]+):\s*$", JOBS),
+        re.split(r"(?m)^ {2}[A-Za-z0-9_-]+:\s*$", JOBS)[1:],
+        strict=True,
+    )
+)
+STEPS = re.split(r"(?m)^ {6}- ", JOBS)[1:]  # the steps of both jobs, in order
 APP_STEP_OUTPUT = r"\$\{\{\s*steps\.app-token\.outputs\.token\s*\}\}"
+
+
+def _only_in(job: str, header: str) -> str:
+    found = [s for s in STEPS if s in job and re.search(rf"(?m)^\s*{re.escape(header)}\s*$", s)]
+    assert len(found) == 1, f"expected exactly one step with {header}"
+    return found[0]
 
 
 def _only(action: str) -> str:
@@ -93,10 +107,64 @@ def test_job_does_not_run_in_an_environment():
     assert not re.search(r"(?m)^\s*environment:", TEXT)
 
 
-def test_one_job_and_an_empty_top_level_permissions_block():
+def test_two_jobs_and_an_empty_top_level_permissions_block():
     assert re.search(r"(?m)^permissions: \{\}\s*$", TEXT), "top-level permissions must stay empty"
-    assert len(re.findall(r"(?m)^ {2}[A-Za-z0-9_-]+:\s*$", JOBS)) == 1, "expected exactly one job"
+    assert list(JOB_TEXT) == ["bump", "pull-request"], "expected the jobs bump and pull-request, in that order"
     assert len(re.findall(r"(?m)^\s*permissions:\s*\{", TEXT)) == 1, "only the top level may use the inline form"
+    for name, job in JOB_TEXT.items():
+        assert re.search(r"(?m)^ {4}permissions:\n {6}contents:\s*read\s*\n(?! {6}\S)", job), (
+            f"{name}: contents: read only"
+        )
+
+
+def test_the_job_that_runs_project_code_holds_no_secret_but_a_read_only_token_for_one_step():
+    bump = JOB_TEXT["bump"]
+    assert "HCW_MAIN_ADMIN" not in bump and "create-github-app-token" not in bump and "create-pull-request" not in bump
+    # GITHUB_TOKEN reaches the refs step only (the upstream releases API), never a step that runs project code.
+    steps = re.split(r"(?m)^ {6}- ", bump)[1:]
+    with_token = [s for s in steps if "secrets." in s or "GH_TOKEN" in s]
+    assert len(with_token) == 1 and re.search(r"(?m)^\s*id:\s*refs\s*$", with_token[0])
+    assert not re.search(r"\b(uv|python|npx|npm|pytest)\b", with_token[0].split("run: |", 1)[1])
+
+
+def _commands(job: str) -> str:
+    """Every shell script of a job (the `run:` values), without comments and quoted messages."""
+    blocks = re.findall(r"(?ms)^ {8}run: (?:\|\n(.*?)(?=^ {6}- |\Z)|(.*?)$)", job)
+    lines = [ln for block, line in blocks for ln in (block or line).splitlines() if not ln.strip().startswith("#")]
+    return re.sub(r"'[^'\n]*'|\"[^\"\n]*\"", '""', "\n".join(lines))
+
+
+def test_the_job_that_holds_the_key_runs_no_engine_code_and_only_mains_bump_script():
+    pr = JOB_TEXT["pull-request"]
+    assert re.search(r"(?m)^ {4}needs:\s*bump\s*$", pr)
+    scripts = _commands(pr)
+    assert "git rm" in scripts and "gh pr merge" in scripts, "the run blocks were not found"
+    # uv only to lock, never to build, sync or run; python only for main's bump script and the hashed uv install.
+    assert set(re.findall(r"\buv\s+(\S+)", scripts)) == {"lock"}
+    for line in scripts.splitlines():
+        if re.search(r"\buv\s+lock\b", line):
+            assert "--no-build" in line, line
+    assert set(re.findall(r"\bpython3?\s+(\S+)", scripts)) == {"scripts/adopt_core_wheel.py", "-m"}
+    assert re.findall(r"\bpython3?\s+-m\s+(\S+\s+\S+\s+\S+)", scripts) == ["pip install --require-hashes"]
+    assert set(re.findall(r"scripts/\S+", scripts)) == {"scripts/adopt_core_wheel.py"}
+    for word in (r"\bpytest\b", r"\bnpx\s", r"\bnpm\s", r"\bmake\s", r"\bpip\s+install\s+(?!--require-hashes)"):
+        assert not re.search(word, scripts), f"the pull-request job must not run project or engine code ({word})"
+    apply = _only_in(pr, "id: apply")
+    app = _only("actions/create-github-app-token")
+    assert STEPS.index(apply) < STEPS.index(app), "the artifact must be checked and applied before the token is minted"
+
+
+def test_the_pull_request_job_installs_the_same_uv_as_the_bump_job_by_hash():
+    version = re.findall(r'"uv==([0-9.]+)"', JOB_TEXT["bump"])
+    hashed = re.findall(r"uv==([0-9.]+) --hash=sha256:[0-9a-f]{64}\b", JOB_TEXT["pull-request"])
+    assert len(version) == 1 and hashed == version, "move the uv hash in the pull-request job with UV_VERSION"
+
+
+def test_the_untrusted_outcome_alone_never_turns_on_auto_merge():
+    merge = [s for s in STEPS if re.search(r"\bgh pr merge\b", s)]
+    assert len(merge) == 1
+    condition = merge[0].split("\n", 1)[0]
+    assert "vars.CORE_AUTOMERGE == 'true'" in condition and "steps.apply.outputs.outcome == 'success'" in condition
 
 
 def test_github_token_is_read_only():

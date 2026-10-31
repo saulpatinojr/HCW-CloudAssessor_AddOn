@@ -4,6 +4,49 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+### Changed
+
+- The engine update to `v0.2.1` is now set up to happen by itself. The engine (`cloud-assessor-core`) is written in
+  `HCW-CloudAssessor_App` and released there as a wheel (a ready-to-install package file); this repository still ran
+  the old local copy, the seed under `packages/cloud-assessor-core`. The dependency line in `pyproject.toml` now carries
+  the marker `CORE_REF v0.1.0-seed`, and `core-update.yml` (every six hours, or by hand) treats a pin that ends in
+  `-seed` as the first adoption: `scripts/adopt_core_wheel.py` rewrites the line to the `v0.2.1` wheel's URL and removes
+  the workspace entries and the Dockerfile and `.dockerignore` lines for the seed, `git rm -r` deletes the seed, and
+  `uv lock` downloads the wheel and records its sha256 in `uv.lock`. The App's GitHub App token then opens the pull
+  request, so the required checks run on it, and with `CORE_AUTOMERGE=true` a compatible one is queued for auto-merge.
+  This is done by the workflow because the wheel's sha256 can only enter `uv.lock` through `uv lock`, which needs to
+  download the release asset. Each bump now also regenerates `docs/rules/catalog.md`, so the drift check in `ci.yml`
+  passes when a release changes the catalog. Refs saulpatinojr/HCW-MigrateOrchestrator_AddOn#50.
+- Made ready for the wheel without changing behaviour today (the bump pull request cannot change workflows, so these
+  had to come first): `scripts/check-catalog.py` reads the catalog the installed engine loads and prints `cost-evidence`
+  checks; `tests/unit/test_api.py` compares the catalog version with the installed catalog; the edition-boundary tests
+  scan the engine wherever it is installed and check its declared requirements; `pyproject.toml` allows a direct
+  (URL) reference, which hatchling otherwise refuses; `security.yml` leaves the engine out of `pip-audit`, which cannot
+  find it on PyPI (`--strict` would fail, checked locally), as the seed already was; `ci.yml` and the `Makefile`
+  measure `packages/` only while the seed's tracked `pyproject.toml` exists. `tests/unit/test_adopt_core_wheel.py` runs
+  the script and the workflow's own steps against copies of the real files. `repository.manifest.json` no longer lists
+  seed files, and the `ruff.toml` ignore for the seed's tests is gone (it ignored a rule that is not selected).
+- `core-update.yml` is split into two jobs after an independent review. `bump` runs this repository's scripts and the
+  new engine's code with no secret and uploads the result as an artifact; `pull-request` runs no project code, accepts
+  only the five bump paths and deletions under the seed, applies them, and only then mints the GitHub App token. Before,
+  upstream code ran in the same job that later received the App's key, and a step can reach later steps of its job.
+  The compatibility outcome now only picks the label and title; auto-merge also needs `CORE_AUTOMERGE`. Both tags must
+  be `v<major>.<minor>.<patch>` before anything is written to the step outputs, and later bumps move the pin with an
+  exact replacement (`scripts/adopt_core_wheel.py --bump`) instead of a `sed` script, which a crafted tag could have
+  turned into a shell command through GNU sed's `e` flag. `scripts/check-catalog.py --write-schema` writes only the
+  seed's catalog (the in-project `.venv` is inside the repository, so it had written into an installed release). The
+  edition-boundary tests forbid the engine to import a network module, and the health test reads the catalog version
+  from `criteria.json` directly instead of through the loader the route itself uses.
+- The `pull-request` job of `core-update.yml` no longer trusts the artifact's contents (Copilot review of pull request
+  67). Code in the `bump` job could have rewritten any of the five allowed files before they were collected. The job now
+  regenerates the bump itself with main's `scripts/adopt_core_wheel.py` and `uv lock --no-build` (uv installed by
+  version and sha256), and refuses the artifact unless `pyproject.toml`, `uv.lock`, the Dockerfile, `.dockerignore` and
+  the deletions are byte-identical. `docs/rules/catalog.md` is the only file taken from the artifact, and only as plain
+  Markdown; the bump pull request's `catalog-check` proves it matches the engine. Both jobs lock with `--no-build`.
+- The `image` job in `ci.yml` checks that the built image runs the Python that `infrastructure/docker/versions.env`
+  names as `BASE_PYTHON_VERSION`, so a base digest that is not that Python fails the pull request
+  ([saulpatinojr/HCW-HybridCloudWorks#1386](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1386)).
+
 ## [0.1.1] - 2026-10-27
 
 This release exists so that the image on Docker Hub states its licence. The image

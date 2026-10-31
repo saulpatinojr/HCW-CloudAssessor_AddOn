@@ -6,9 +6,6 @@
   "requiredFiles": [
     "README.md", "CLAUDE.md", "AGENTS.md", "SECURITY.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "LICENSE", "NOTICE", "CHANGELOG.md", "VALIDATION.md",
     "pyproject.toml", "uv.lock", ".python-version", "ruff.toml", "Makefile", ".env.example", ".gitignore", ".dockerignore", "docker-compose.yml",
-    "packages/cloud-assessor-core/pyproject.toml", "packages/cloud-assessor-core/README.md",
-    "packages/cloud-assessor-core/catalog/criteria.json", "packages/cloud-assessor-core/catalog/schema.json", "packages/cloud-assessor-core/catalog/scoring.json",
-    "packages/cloud-assessor-core/src/cloud_assessor_core/model.py", "packages/cloud-assessor-core/src/cloud_assessor_core/evaluate/evaluators.py",
     "src/cloud_assessment_lab/app.py", "src/cloud_assessment_lab/edition.py", "src/cloud_assessment_lab/__main__.py",
     "web/index.html", "web/app.js", "web/styles.css", "web/theme.css",
     "samples/sample-resource-graph.json", "samples/sample-resource-graph.csv", "samples/sample-all-resources-export.csv",
@@ -20,7 +17,7 @@
     "docs/adr/ADR-0008-hard-edition-boundary-the-demo-cannot-construct-an-azure-provider.md",
     "docs/adr/ADR-0011-uploads-are-never-persisted-and-every-demo-conclusion-carries-an-evidence-state.md",
     "docs/adr/ADR-0028-appliance-upstream-web-front-downstream.md",
-    "scripts/check-catalog.py", "scripts/package-repository.sh", "scripts/package-repository.ps1",
+    "scripts/check-catalog.py", "scripts/adopt_core_wheel.py", "scripts/package-repository.sh", "scripts/package-repository.ps1",
     ".github/CODEOWNERS", ".github/dependabot.yml", ".github/pull_request_template.md", ".github/copilot-instructions.md",
     ".github/workflows/ci.yml", ".github/workflows/security.yml", ".github/workflows/publish-images.yml", ".github/workflows/core-update.yml",
     "infrastructure/README.md", "infrastructure/docker/Dockerfile", "infrastructure/docker/versions.env",

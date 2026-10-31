@@ -6,7 +6,10 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.14.6,<3.15"
 dependencies = [
-  "cloud-assessor-core",
+  # The engine. Until the first adoption it is the local seed (packages/cloud-assessor-core, a workspace member) and
+  # the marker below names the seed; core-update.yml reads it, and its first run after a newer upstream release
+  # replaces this line with the release wheel by URL (scripts/adopt_core_wheel.py), deletes the seed and re-locks.
+  "cloud-assessor-core",  # CORE_REF v0.1.0-seed
   "fastapi==0.162.0",
   "uvicorn==0.54.0",
   "pydantic==2.14.1",
@@ -27,6 +30,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cloud_assessment_lab"]
+
+# The engine is pinned by its release wheel URL once core-update.yml has adopted it (a direct reference), and
+# hatchling refuses to build a project with one unless this is set. Harmless while the engine is the seed.
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.uv]
 workspace = { members = ["packages/cloud-assessor-core"] }

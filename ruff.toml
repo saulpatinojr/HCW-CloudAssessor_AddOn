@@ -9,7 +9,6 @@ ignore = ["B008"]  # FastAPI dependency defaults in signatures
 
 [lint.per-file-ignores]
 "tests/**" = ["S101"]
-"packages/cloud-assessor-core/tests/**" = ["S101"]
 
 [format]
 quote-style = "double"
