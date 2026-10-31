@@ -22,7 +22,7 @@ All notable changes to this repository are recorded here. The format follows Kee
     probe, and the `pull-request` job's own byte-for-byte check; it never reads the outcome. GitHub merges only after
     the "Protect main" ruleset's required checks (`lint`, `test`, `image`, `package`, `e2e`, `catalog-check`,
     `pip-audit`, `secret-scan`, `dependency-review`) pass on the bump pull request itself. The outcome still picks the
-    label, the title and the body text, so when `CORE_AUTOMERGE` is `true` a `needs-adaptation` bump also has
+    label, the title, the body text and the not-compatible warning, so when `CORE_AUTOMERGE` is `true` a `needs-adaptation` bump also has
     auto-merge turned on and merges once its checks pass (normally after someone fixes it on its branch); select
     **Disable auto-merge** on the pull request to hold one.
   - `tests/security/test_core_update_app_token.py` checks both guards. `docs/whats-new-upstream.md`, `VALIDATION.md`, a
