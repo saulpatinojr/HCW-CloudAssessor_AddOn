@@ -50,7 +50,7 @@ PYPROJECT_REPLACEMENTS = (
     ('testpaths = ["tests", "packages/cloud-assessor-core/tests"]', 'testpaths = ["tests"]'),
     ('source = ["packages/cloud-assessor-core/src", "src"]', 'source = ["src"]'),
 )
-SITE = "/install/lib/python3.14/site-packages"
+SITE = "/install/lib/python3.15/site-packages"
 DOCKERFILE_REMOVALS = (
     f"COPY packages/cloud-assessor-core/src/cloud_assessor_core {SITE}/cloud_assessor_core\n",
     f"COPY packages/cloud-assessor-core/catalog {SITE}/cloud_assessor_core/catalog_data\n",

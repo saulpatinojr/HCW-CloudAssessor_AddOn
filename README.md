@@ -6,7 +6,7 @@
 [![security](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/security.yml/badge.svg)](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/security.yml)
 [![publish-images](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/publish-images.yml/badge.svg)](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/publish-images.yml)
 [![core-update](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/core-update.yml/badge.svg)](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/actions/workflows/core-update.yml)
-[![python](https://img.shields.io/badge/python-3.14.6%2B-3776AB?logo=python&logoColor=white)](.python-version)
+[![python](https://img.shields.io/badge/python-3.15.2%2B-3776AB?logo=python&logoColor=white)](.python-version)
 [![image](https://img.shields.io/badge/docker.io-hybridcloudworks%2Fimg--ca--lab--addon-2496ED?logo=docker&logoColor=white)](docs/deployment/lab-host.md)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -72,10 +72,10 @@ Terraform state.
 
 ## Quick start
 
-Requires Python 3.14.6 or newer and [`uv`](https://docs.astral.sh/uv/) 0.11.32 or newer.
+Requires Python 3.15.2 or newer and [`uv`](https://docs.astral.sh/uv/) 0.11.32 or newer.
 
 ```bash
-uv python pin 3.14.6 && uv sync --all-packages
+uv python pin 3.15.2 && uv sync --all-packages
 uv run pytest -q --cov=packages --cov=src          # unit, contract, security, manifest; coverage gate 85
 CA_ALLOW_NO_TURNSTILE=1 PORT=8080 uv run python -m cloud_assessment_lab   # http://127.0.0.1:8080
 curl -s http://127.0.0.1:8080/api/health
@@ -85,7 +85,7 @@ curl -s -X POST http://127.0.0.1:8080/api/assessments -H 'content-type: applicat
 PowerShell:
 
 ```powershell
-uv python pin 3.14.6; uv sync --all-packages
+uv python pin 3.15.2; uv sync --all-packages
 uv run pytest -q --cov=packages --cov=src
 $env:CA_ALLOW_NO_TURNSTILE = "1"; $env:PORT = "8080"; uv run python -m cloud_assessment_lab
 Invoke-RestMethod http://127.0.0.1:8080/api/health

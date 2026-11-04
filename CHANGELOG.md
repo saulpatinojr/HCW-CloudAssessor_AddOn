@@ -74,6 +74,19 @@ All notable changes to this repository are recorded here. The format follows Kee
 - The `image` job in `ci.yml` checks that the built image runs the Python that `infrastructure/docker/versions.env`
   names as `BASE_PYTHON_VERSION`, so a base digest that is not that Python fails the pull request
   ([saulpatinojr/HCW-HybridCloudWorks#1386](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1386)).
+- **The base image and the Python line moved from 3.14 to 3.15, following the website
+  ([saulpatinojr/HCW-HybridCloudWorks#1386](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1386)).** The
+  website's lab base moved to `python:3.15.2-slim-trixie` on 2026-10-31
+  ([its pull request 1468](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1468)). `base-update.yml` refuses a
+  move to another Python minor line on purpose (a person must decide, because the Dockerfile, `pyproject.toml` and the
+  workflows name the line), so `base-follows-website` in `security.yml` had been red on `main` since then. This change
+  is that decision: `infrastructure/docker/versions.env` (`BASE_IMAGE`, `BASE_DIGEST`, `BASE_PYTHON_VERSION`) and both
+  `FROM` lines moved to the website's pin, every `python3.14` path in the Dockerfile and in `scripts/adopt_core_wheel.py`
+  became `python3.15`, `requires-python` became `>=3.15.2,<3.16` (with `.python-version`, the `Makefile`, the README and
+  `uv.lock` re-locked for CPython 3.15 with the uv version CI uses), and `ci.yml`, `security.yml` and `core-update.yml`
+  set up Python 3.15 on the runner. No package version in `uv.lock` changed; only its wheels are now the CPython 3.15
+  ones. The engine wheel (`cloud-assessor-core`, released by `HCW-CloudAssessor_App`) must itself allow Python 3.15
+  before this builds: see the pull request for the state of that.
 
 ## [0.1.1] - 2026-10-27
 
