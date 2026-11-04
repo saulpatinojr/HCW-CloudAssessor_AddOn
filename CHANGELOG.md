@@ -4,6 +4,12 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+### Changed
+- The project's Python floor is `3.15.1` (`requires-python = ">=3.15.1,<3.16"`, `.python-version`, the Makefile's
+  `uv python pin`), not `3.15.2`: GitHub's hosted runners carry CPython 3.15.1 and the pinned uv 0.11.32 cannot download
+  3.15.2, so `uv sync --frozen` in CI failed with `No interpreter found for Python 3.15.2`. The image still runs the
+  website's `python:3.15.2-slim-trixie` digest; the floor is the same one the NetworkEyes add-on took.
+
 ### Security
 - `core-update.yml` now runs from `main` only, and auto-merge no longer listens to the `bump` job's report. These are
   two High findings from a review of the same two-job workflow in the MigrateOrchestrator add-on
