@@ -87,7 +87,7 @@ All notable changes to this repository are recorded here. The format follows Kee
   set up Python 3.15 on the runner. No package version in `uv.lock` changed; only its wheels are now the CPython 3.15
   ones. The engine wheel (`cloud-assessor-core`, released by `HCW-CloudAssessor_App`) must itself allow Python 3.15
   before this builds, and the `v0.3.0` wheel does not (`Requires-Python: <3.15`), so this change also moves the engine
-  pin from `v0.3.0` to `v0.3.1`, the metadata-only release that widens the ceiling to `<3.16`
+  pin from `v0.3.0` to `v0.3.2`, the metadata-only release that widens the ceiling to `<3.16` (the `v0.3.1` tag published nothing: the App's changelog guard stopped every tag workflow, so `0.3.2` carries the same change)
   ([App #81](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/81); no engine code changed, catalog `1.1.0`
   stays). `docs/whats-new-upstream.md` (entry dated 2026-11-04) records the trial that proved the chain on 3.15.
 
