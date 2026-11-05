@@ -120,6 +120,15 @@ both fictional samples are identical between the seed and `0.2.1` (compared on 2
 
 ## Entries, newest first
 
+### 2026-11-05: the HCW Main Admin App is also used by two App repositories (credential notes only)
+
+- On 2026-11-04 the lockfile workflow upstream (`HCW-CloudAssessor_App`, this edition's App) and in `HCW-CloudCrawler_App` started pushing Dependabot's regenerated
+  lockfile exports with the HCW Main Admin GitHub App, the App this repository's `core-update.yml` uses ([HCW-CloudCrawler_App#71](https://github.com/saulpatinojr/HCW-CloudCrawler_App/pull/71), [HCW-CloudAssessor_App#87](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/87); owner decision on [HCW-CloudCrawler_App#70](https://github.com/saulpatinojr/HCW-CloudCrawler_App/issues/70)). Once the owner installs it there, the App is on six repositories, not four.
+- **Reaches this edition? Only the notes.** No engine, pin, workflow behaviour or test changes here. Those two
+  repositories hold a separate private key as Dependabot secrets, so rotating this repository's key is unchanged. The
+  `core-update.yml` comment and `VALIDATION.md` now say where the App is installed, and the accepted-risk note says a
+  stolen key could reach those two repositories as well, whose `main` still needs an approved pull request.
+
 ### 2026-10-31: adoption of `v0.2.1` handed to `core-update.yml` (this repository's branch `chore/adopt-core-v0.2.1`)
 
 Read upstream between the seed (`0.1.0`) and `v0.2.1` from a clone of the App at tag `v0.2.1` (`55b7242`): its

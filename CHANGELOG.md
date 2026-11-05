@@ -31,6 +31,12 @@ All notable changes to this repository are recorded here. The format follows Kee
     on GitHub yet; see `VALIDATION.md`.
 
 ### Changed
+- **Notes on the HCW Main Admin App now say it is also installed on two App repositories.** On 2026-11-04 the owner
+  chose to reuse the App for the lockfile workflow of `HCW-CloudCrawler_App` and `HCW-CloudAssessor_App`
+  (HCW-CloudCrawler_App issue #70), so once it is installed there it covers six repositories, not four. The
+  `core-update.yml` comment and `VALIDATION.md` (key rotation, where the App is installed and the accepted-risk note)
+  now say so. Those two repositories use their own private key, so rotating this repository's key is unchanged.
+  Comments and documentation only.
 
 - The engine update to `v0.2.1` is now set up to happen by itself. The engine (`cloud-assessor-core`) is written in
   `HCW-CloudAssessor_App` and released there as a wheel (a ready-to-install package file); this repository still ran
