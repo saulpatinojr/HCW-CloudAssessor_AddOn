@@ -55,10 +55,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       # The build stage exports uv.lock, so a lock or Dockerfile change is proven here, not first at a release tag.
+      # PUBLISH_CACHE_BUST is the per-run value the Dockerfile's security-update layer names (see the Dockerfile and
+      # tests/security/test_image_security_updates.py); every workflow build of the Dockerfile passes it.
       - name: The lab image builds and keeps its edition boundary
         run: |
           set -euo pipefail
-          docker build -f infrastructure/docker/Dockerfile --build-arg EDITION=lab -t addon:ci .
+          docker build -f infrastructure/docker/Dockerfile --build-arg EDITION=lab \
+            --build-arg "PUBLISH_CACHE_BUST=${{ github.run_id }}-${{ github.run_attempt }}" -t addon:ci .
           if docker run --rm --entrypoint python addon:ci -c 'import azure' 2>/dev/null; then
             echo '::error::azure is importable in the lab image'; exit 1
           fi

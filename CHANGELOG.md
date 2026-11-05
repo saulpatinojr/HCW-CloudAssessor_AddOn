@@ -4,6 +4,22 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+### Security
+- The image's runtime stage applies Debian's security updates in a shape that cannot be skipped or stale, so the
+  published image clears apt CVE-2026-109518
+  ([website issue 1562](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1562)). On 2026-11-05 the
+  website's Docker Scout gate refused `img-ca-lab-addon` for `apt 3.0.3` / `libapt-pkg7.0 3.0.3`, fixed in `3.0.4`
+  and published only in `trixie-security`; the newest `python:3.15-slim-trixie` digest still shipped `3.0.3`, so no
+  base move could clear it. The stage already ran `apt-get upgrade`, but a cached layer could carry an old result
+  into a new publish run, and a failed index fetch left apt as it was. Now, as in the NetworkEyes App's
+  [pull request 349](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/349): the update runs with
+  `--error-on=any` (a missing index fails the build), every `apt-get` runs with `-o Acquire::Retries=0` (the
+  advisory needs a download retry to slip an unverified package past the base's apt), and the layer names a per-run
+  `PUBLISH_CACHE_BUST` build argument that `ci.yml` and both builds in `publish-images.yml` pass as the run id and
+  attempt, so each publish run upgrades afresh and the image scanned is the image pushed. A local build on the
+  current base went from `apt 3.0.3` to `3.0.4`. `tests/security/test_image_security_updates.py` pins every part
+  and the build argument in both workflows.
+
 ### Fixed
 - `core-update.yml`'s compatibility step could report a bump as `compatible` when its lint or catalog check had
   failed: the step ran `ruff && check-catalog && pytest` as one list under `set -e`, and bash does not exit on a
