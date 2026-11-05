@@ -164,11 +164,20 @@ jobs:
         id: compat
         name: Compatibility check (lint, tests, catalog, browser e2e)
         continue-on-error: true
+        # One check per line, on purpose. `set -e` does not stop at a command that fails inside an `a && b && c` list
+        # (bash skips the exit for every member but the last), so the earlier shape `ruff && check-catalog && pytest`
+        # let a failing lint or catalog check fall through to the browser suite, and the step reported success: the
+        # bump pull request was then opened labelled "compatible" although it was not. Seen first on the NetworkEyes
+        # add-on's first real bump (its pull request 74). tests/security/test_core_update_app_token.py pins this shape.
         run: |
           set -euo pipefail
           uv sync --frozen --all-packages
-          uv run ruff check . && uv run python scripts/check-catalog.py && uv run pytest -q
-          npm init -y >/dev/null && npm install --no-save --no-audit --no-fund "@playwright/test@1.63.0" && npx playwright install --with-deps chromium
+          uv run ruff check .
+          uv run python scripts/check-catalog.py
+          uv run pytest -q
+          npm init -y >/dev/null
+          npm install --no-save --no-audit --no-fund "@playwright/test@1.63.0"
+          npx playwright install --with-deps chromium
           CI=1 npx playwright test -c tests/e2e/playwright.config.ts
       # Only the five bump paths travel, and only when they changed; every deletion is listed (job 2 refuses any outside
       # the seed). The outcome is the compatibility step's result, written as one word.
