@@ -119,6 +119,10 @@ the release candidate `v0.1.1-rc.1` were pushed that way. What each version cont
 Release `0.1.1` is the first image that states its licence (`org.opencontainers.image.licenses=MIT`). It was published on
 2026-10-27 by the tag `v0.1.1`: digest `sha256:95082857e3b866743ffa5c827c7b897d085e945d80aa4b710f58926b03170456`,
 [release](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/releases/tag/v0.1.1), checks in `VALIDATION.md`.
+Release `0.1.2` is the first image whose last stage applies Debian's security updates in a way that cannot be skipped or
+stale, so it carries apt `3.0.4` and clears the website's Docker Scout gate (website issue
+[1562](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1562)). It is published by the tag `v0.1.2`, which
+is the owner's call and is not made by the pull request that prepares it.
 
 ## What the export cannot show
 

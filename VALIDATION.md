@@ -3,6 +3,26 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-11-05 (release 0.1.2 prepared)
+
+Toolchain: Python 3.15 (`.python-version`), uv 0.12.0 for the checks and `uvx uv@0.11.32 lock` for the lock file (CI's
+`UV_VERSION`), environment from `uv sync --frozen --all-packages`, on a Windows 11 workstation. This run prepares the
+version bump only: nothing in `src/`, `web/`, `samples/` or `docs/api/` changed since `v0.1.1` (`git diff v0.1.1
+origin/main` over them is empty). The reason for the release is the apt security update of pull request 76 (website issue
+1562); its dry run on that commit, run 42115517340, was green. No image was built here.
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| The lab application's version in every place that states it: `pyproject.toml`, `uv.lock` (the `cloud-assessment-lab` entry only), `__version__`, `repository.manifest.json` and the two sample lines in `docs/operations/runbook.md` | yes | all `0.1.2`. `uvx uv@0.11.32 lock` changed that one `uv.lock` line and nothing else (`revision = 3` stayed, so no hand edit this time). The engine pin stays `cloud-assessor-core 0.3.2` |
+| `docs/api/openapi.yaml`, `info.version` | decided, not changed | stays `0.1.0`, for the reason recorded in the run of 2026-10-27 |
+| `uv lock --check` | yes | exit 0 |
+| `uv run ruff check .` and `uv run ruff format --check .` | yes | clean (`All checks passed!`, 56 files already formatted) |
+| `uv run pytest -q tests/security tests/unit` | yes | 312 passed, 9 skipped; the 16 failures and 17 errors are all in `tests/unit/test_adopt_core_wheel.py`, whose tests run `bash -c`, which on this workstation resolves to WSL rather than Git Bash (the known environmental failure; CI runs them on Ubuntu). With that file deselected, plus `tests/end_to_end/test_repository_manifest.py`: 305 passed |
+| `/api/health` and `X-Addon-Version` read `__version__` | yes | `tests/unit/test_api.py` asserts both equal `__version__`; `tests/end_to_end/test_repository_manifest.py` holds `__version__` to `pyproject.toml` and `repository.manifest.json` |
+| Docker image build, the in-image boundary checks, Trivy, and the apt version in a built image | **no**, CI only | the `image` job of `ci.yml` builds one on the pull request; the publish dry run on `main` after the merge is recorded in the pull request |
+| Push, provenance, SBOM, attestation and digest of `v0.1.2` | **no** | only the tag `v0.1.2` publishes, and it is the owner's call |
+| The live lab host | **no** | it runs `0.1.1` until the website pins the new digest |
+
 ## Run 2026-10-31, third round (`core-update.yml` runs from `main` only; auto-merge ignores the bump job's report)
 
 The first step of both jobs refuses a run whose `github.ref` is not `refs/heads/main`, the `pull-request` job's `if:`

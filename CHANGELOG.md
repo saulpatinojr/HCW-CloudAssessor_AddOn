@@ -4,6 +4,31 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-05
+
+This release exists so that the published image carries apt `3.0.4`. On 2026-11-05 the website's Docker Scout gate
+(the check that refuses a lab image with a known, fixable vulnerability) stopped `img-ca-lab-addon` on apt
+CVE-2026-109518, fixed in `3.0.4` ([website issue 1562](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1562)).
+[Pull request 76](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/76) makes the image's last stage apply
+Debian's security updates in a shape that cannot be skipped or stale (the Security entry below), and a fix in the
+Dockerfile reaches the lab host only through a new published image, so a tag is needed. The image is published by the
+tag `v0.1.2`, which is the owner's call and is not made by the pull request that prepares this version.
+
+The lab application's own code did not change since `v0.1.1`: `src/`, the pane (`web/`), the API description
+(`docs/api/openapi.yaml`) and the samples are identical (`git diff v0.1.1 main` over them is empty). What changed is what
+the image is built from and runs: the engine is now the App's released wheel `cloud-assessor-core 0.3.2` (catalog
+`1.1.0`, 25 criteria) instead of the `0.1.0` seed that used to live in this repository, the base image is the website's
+`python:3.15.2-slim-trixie` (it was Python 3.14), two libraries moved (Starlette 1.9.0 to 1.10.0, msgpack 1.2.3 to
+1.2.4), and the security updates above. The engine-update workflow (`core-update.yml`) was hardened in the same
+period. The entries below, from "Security" to "Changed", are the detail; `VALIDATION.md` (run 2026-11-05) records what
+was checked for this version.
+
+The version moves from `0.1.1` to `0.1.2` in `pyproject.toml`, in `uv.lock` (the `cloud-assessment-lab` entry only,
+re-locked with uv 0.11.32, the version CI uses), in `__version__` (`src/cloud_assessment_lab/__init__.py`), in
+`repository.manifest.json` and in the two sample lines of `docs/operations/runbook.md`, so `/api/health` and the
+`X-Addon-Version` header say `0.1.2`. `docs/api/openapi.yaml` keeps `info.version: 0.1.0`, because that field is the
+version of the API document and the API has not changed.
+
 ### Security
 - The image's runtime stage applies Debian's security updates in a shape that cannot be skipped or stale, so the
   published image clears apt CVE-2026-109518
