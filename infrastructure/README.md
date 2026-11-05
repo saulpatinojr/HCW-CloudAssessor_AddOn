@@ -9,7 +9,7 @@
 There is no Terraform here and there must not be (AddOn Integration Standard, section 3): the lab host belongs to the
 website repository (`lab-host/ansible`, role `addons`), and the Azure appliance belongs to `HCW-CloudAssessor_App`.
 
-First-party packages are copied into `/usr/local/lib/python3.14/site-packages` as source trees (engine, catalog as
+First-party packages are copied into `/usr/local/lib/python3.15/site-packages` as source trees (engine, catalog as
 `cloud_assessor_core/catalog_data`, lab application) rather than built as wheels, so no build backend enters the image.
 The build stage exports `uv.lock` with `uv export --frozen --format requirements-txt --no-dev --no-emit-project
 --no-emit-workspace` (hashes on by default), using the uv CI uses by digest. That export is the only input

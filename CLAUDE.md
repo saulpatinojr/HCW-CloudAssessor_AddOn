@@ -1,7 +1,7 @@
 # CLAUDE.md — working agreement for Claude Code in this repository
 
 This is `saulpatinojr/HCW-CloudAssessor_AddOn`, the **lab edition** of the Cloud Assessor (AddOn id `cloud-assessment`,
-site route `/tools/cloud-assessment`, origin `https://cloud-assessment.lab.hybridcloudworks.com`): a Python 3.14 FastAPI
+site route `/tools/cloud-assessment`, origin `https://cloud-assessment.lab.hybridcloudworks.com`): a Python 3.15 FastAPI
 application that assesses an uploaded Azure Resource Graph export against a declarative criteria catalog, a vanilla pane
 the website frames, fictional samples, docs, a hardened Dockerfile and SHA-pinned workflows. The engine
 is **owned upstream** by `saulpatinojr/HCW-CloudAssessor_App`: it was seeded here (ADR-0001), the App adopted it unchanged
