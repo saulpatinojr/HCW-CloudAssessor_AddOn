@@ -5,6 +5,14 @@ All notable changes to this repository are recorded here. The format follows Kee
 ## [Unreleased]
 
 ### Fixed
+- `core-update.yml`'s compatibility step could report a bump as `compatible` when its lint or catalog check had
+  failed: the step ran `ruff && check-catalog && pytest` as one list under `set -e`, and bash does not exit on a
+  failure inside such a list (only the last member counts), so an earlier failure fell through to the browser suite
+  and the step reported success. Each check is now its own line, and `tests/security/test_core_update_app_token.py`
+  runs the step with stubbed tools that fail one check at a time and requires the step to fail. The same defect was
+  found and fixed first in the NetworkEyes add-on
+  ([its pull request 75](https://github.com/saulpatinojr/HCW-NetworkEyes_AddOn/pull/75)), where its first real bump
+  was opened as `compatible` with a refused catalog. Refs saulpatinojr/HCW-MigrateOrchestrator_AddOn#50.
 - `core-update.yml`'s two `setup-python` steps read `.python-version` (`python-version-file`) instead of carrying a
   literal copy of it, so the interpreter is named in one place. A literal copy drifts: in the Cloud Crawler add-on,
   whose `pull-request` job also forbids uv's own Python downloads, `3.14` drifted against `3.14.6` and its scheduled

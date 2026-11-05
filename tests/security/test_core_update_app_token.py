@@ -5,9 +5,14 @@ merge. The App's client ID is the repository variable HCW_MAIN_ADMIN_CLIENT_ID a
 secret HCW_MAIN_ADMIN_PRIVATE_KEY; the job does not run in an environment. These are static checks of the workflow
 text; they do not prove the credential works. A run with probe=true does (see the header of the workflow)."""
 
+import os
 import re
+import subprocess
+
+import pytest
 
 from ..conftest import ROOT
+from .test_base_update_workflow import BASH
 
 TEXT = (ROOT / ".github" / "workflows" / "core-update.yml").read_text(encoding="utf-8")
 VERSIONS = (ROOT / "infrastructure" / "docker" / "versions.env").read_text(encoding="utf-8")
@@ -287,3 +292,84 @@ def test_setup_python_installs_the_interpreter_python_version_names():
     lowest = tuple(int(part) for part in requires.group(1).split("."))
     ceiling = tuple(int(part) for part in requires.group(2).split("."))
     assert lowest <= version < ceiling, f"BASE_PYTHON_VERSION {base_python} is outside {requires.group(0)}"
+
+
+# The compatibility step is the one that decides the bump pull request's label and title. It is run here the way GitHub
+# runs it (bash -e), with `uv`, `npm` and `npx` replaced by stubs that fail one check at a time, because a regular
+# expression over its text cannot show that a failure stops it: `set -e` does not exit on a command that fails inside
+# an `a && b && c` list (bash skips the exit for every member but the last), which is how the NetworkEyes add-on's
+# first real bump (its pull request 74) reported "compatible" with a refused catalog and 41 failing tests. This
+# repository's step had the same shape.
+COMPAT_CHECKS = (
+    "uv run ruff check .",
+    "uv run python scripts/check-catalog.py",
+    "uv run pytest -q",
+    "CI=1 npx playwright test -c tests/e2e/playwright.config.ts",
+)
+
+
+def _run_body(step: str) -> str:
+    """The `run: |` script of a step, dedented. Stops at the first line that is not part of the block (a comment or
+    key at the step's own indentation), so a comment that follows the step never becomes a command."""
+    body = step.split("run: |\n", 1)[1]
+    lines = []
+    for line in body.splitlines():
+        if line.strip() and not line.startswith(" " * 10):
+            break
+        lines.append(line[10:])
+    return "\n".join(lines) + "\n"
+
+
+def test_the_compatibility_step_runs_each_check_as_its_own_command():
+    """Under `set -e` bash leaves an `&&` list alone except for its last member, so a check that fails inside such a
+    list is hidden and the step reports success. Every check is therefore a line of its own, and no line joins
+    commands with `&&`, `||` or `;`."""
+    compat = _only_in(JOB_TEXT["bump"], "id: compat")
+    assert re.search(r"(?m)^ {8}continue-on-error: true\s*$", compat), "its outcome is the label, so the job goes on"
+    lines = [line.strip() for line in _run_body(compat).splitlines() if line.strip()]
+    assert lines[0] == "set -euo pipefail"
+    for check in COMPAT_CHECKS:
+        assert check in lines, f"{check!r} must be a line of its own"
+    for line in lines[1:]:
+        assert not re.search(r"&&|\|\||;", line), f"a joined list hides a failure from set -e: {line!r}"
+
+
+@pytest.mark.skipif(BASH is None, reason="bash is not available on this computer")
+@pytest.mark.parametrize("failing", [*COMPAT_CHECKS, None], ids=lambda c: c or "all-pass")
+def test_the_compatibility_step_fails_when_any_check_fails(tmp_path, failing):
+    """Every stubbed tool exits 0 except the one check named by `failing`, which exits 1; the step must then exit
+    non-zero (GitHub records `steps.compat.outcome == 'failure'`). With every check passing it exits 0."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    stub = (
+        "#!/usr/bin/env bash\n"
+        'line="$(basename "$0") $*"\n'
+        'if [ -n "${FAILING:-}" ] && [ "$line" = "$FAILING" ]; then echo "stub: $line fails" >&2; exit 1; fi\n'
+        'echo "stub: $line"\n'
+    )
+    for name in ("uv", "npm", "npx"):
+        (bin_dir / name).write_text(stub, encoding="utf-8", newline="\n")
+        (bin_dir / name).chmod(0o755)
+    # A sentinel after the step's own lines: with the last check failing, "no later check ran" is vacuous, so the
+    # sentinel is what proves that bash stopped.
+    sentinel = "compatibility-sentinel"
+    script = tmp_path / "compat.sh"
+    script.write_text(
+        _run_body(_only_in(JOB_TEXT["bump"], "id: compat")) + f'echo "{sentinel}"\n', encoding="utf-8", newline="\n"
+    )
+    # The stubs see the command without its `CI=1` prefix (bash passes that as the environment).
+    env = {**os.environ, "PATH": os.pathsep.join([bin_dir.as_posix(), os.environ.get("PATH", "")])}
+    if failing is not None:
+        env["FAILING"] = failing.removeprefix("CI=1 ")
+    result = subprocess.run(
+        [BASH, "-e", script.as_posix()], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60
+    )
+    if failing is None:
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert all(c.removeprefix("CI=1 ") in result.stdout for c in COMPAT_CHECKS)
+        assert sentinel in result.stdout
+    else:
+        assert result.returncode != 0, f"{failing!r} failed but the step passed:\n{result.stdout}{result.stderr}"
+        later = [c for c in COMPAT_CHECKS if COMPAT_CHECKS.index(c) > COMPAT_CHECKS.index(failing)]
+        assert not any(c.removeprefix("CI=1 ") in result.stdout for c in later), "a later check ran after a failure"
+        assert sentinel not in result.stdout, "a command after the compatibility checks ran after a failure"
