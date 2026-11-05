@@ -83,6 +83,7 @@ def stage_lines(text: str, stage: str) -> list[str]:
 
 
 def runtime_stage_problems(text: str) -> list[str]:
+    """Every way the runtime stage's security-update step departs from the pinned shape; empty when it matches."""
     problems: list[str] = []
     body = stage_lines(text, RUNTIME_STAGE)
     if f"ARG {CACHE_BUST_ARG}=" not in body:
@@ -124,6 +125,7 @@ def runtime_stage_problems(text: str) -> list[str]:
 
 
 def _code(text: str) -> str:
+    """The workflow text without comment lines, so a comment can never satisfy or hide an assertion."""
     return "\n".join(line for line in text.replace("\r\n", "\n").split("\n") if not line.lstrip().startswith("#"))
 
 
@@ -169,10 +171,12 @@ def workflow_build_problems(text: str) -> tuple[int, list[str]]:
 
 
 def test_runtime_stage_applies_security_updates_in_the_pinned_shape() -> None:
+    """The real Dockerfile matches the shape; a departure is named by the checker."""
     assert runtime_stage_problems(DOCKER_TEXT) == []
 
 
 def _real_run() -> str:
+    """The one RUN of the runtime stage that does package work, as a logical line."""
     body = stage_lines(DOCKER_TEXT, RUNTIME_STAGE)
     return next(line for line in body if line.startswith("RUN ") and "apt-get" in line)
 
@@ -221,12 +225,14 @@ LOOSENED = [
 
 @pytest.mark.parametrize(("label", "fragment", "replacement"), LOOSENED, ids=[case[0] for case in LOOSENED])
 def test_a_loosened_security_update_step_is_noticed(label: str, fragment: str, replacement: str) -> None:
+    """Each loosened variant of the step is reported, so the shape test cannot be weakened one part at a time."""
     assert fragment in DOCKER_TEXT, f"{label}: the fragment this case loosens is not in the Dockerfile: {fragment!r}"
     mutated = DOCKER_TEXT.replace(fragment, replacement, 1)
     assert runtime_stage_problems(mutated), f"{label}: the check did not notice"
 
 
 def test_the_upgrade_runs_before_anything_is_copied_in() -> None:
+    """The security updates land before the application or its dependencies enter the stage."""
     body = stage_lines(DOCKER_TEXT, RUNTIME_STAGE)
     copies = [i for i, line in enumerate(body) if line.upper().startswith("COPY ")]
     assert copies and body.index(_real_run()) < copies[0]
@@ -234,6 +240,7 @@ def test_the_upgrade_runs_before_anything_is_copied_in() -> None:
 
 @pytest.mark.parametrize("name", sorted(WORKFLOW_BUILDS))
 def test_every_workflow_build_of_the_dockerfile_passes_the_cache_bust(name: str) -> None:
+    """Each listed workflow builds the Dockerfile the expected number of times, every time with the per-run value."""
     text = (WORKFLOWS / name).read_text(encoding="utf-8")
     builds, problems = workflow_build_problems(text)
     assert problems == []
@@ -243,6 +250,7 @@ def test_every_workflow_build_of_the_dockerfile_passes_the_cache_bust(name: str)
 
 @pytest.mark.parametrize("name", sorted(WORKFLOW_BUILDS))
 def test_a_workflow_build_without_the_cache_bust_is_noticed(name: str) -> None:
+    """Dropping the build argument from one build of a workflow is reported."""
     text = (WORKFLOWS / name).read_text(encoding="utf-8")
     assert CACHE_BUST_VALUE in text
     mutated = text.replace(CACHE_BUST_VALUE, "EDITION=lab", 1)
