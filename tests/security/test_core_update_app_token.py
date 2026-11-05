@@ -10,6 +10,9 @@ import re
 from ..conftest import ROOT
 
 TEXT = (ROOT / ".github" / "workflows" / "core-update.yml").read_text(encoding="utf-8")
+VERSIONS = (ROOT / "infrastructure" / "docker" / "versions.env").read_text(encoding="utf-8")
+PYPROJECT = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+PYTHON_VERSION_FILE = (ROOT / ".python-version").read_text(encoding="utf-8").strip()
 JOBS = TEXT.split("\njobs:\n", 1)[1]
 # The two jobs, by name: `bump` (runs project and upstream code, no secret) and `pull-request` (the App token).
 JOB_TEXT = dict(
@@ -253,3 +256,34 @@ def test_probe_step_only_reads_and_checks_the_token_covers_this_repository_only(
     # the value attached (-XPOST, -fname=value) or separate.
     writes = r"\bgh pr\b|\bgit\b|--method|\s-[XfF]|--field|--raw-field|--input"
     assert not re.search(writes, probe[0]), "the probe must not write"
+
+
+def _versions_env(key: str) -> str:
+    found = re.search(rf"(?m)^{key}=(\S+)$", VERSIONS)
+    assert found, f"{key} is missing from infrastructure/docker/versions.env"
+    return found.group(1)
+
+
+def test_setup_python_installs_the_interpreter_python_version_names():
+    """Both setup-python steps read `.python-version` rather than carrying a literal copy of it, so there is one place
+    to move the interpreter. A literal copy drifts: in the Cloud Crawler add-on, whose pull-request job also forbids
+    uv's own Python downloads, `.python-version` said 3.14.6 while setup-python's `3.14` handed out 3.14.10, and every
+    scheduled run failed with `No interpreter found for Python 3.14.6` (its run 41944145931, 2026-11-05). This
+    repository's pull-request job lets uv download an interpreter, so the same drift would have hidden behind a
+    download instead of failing; reading the file removes the drift either way. The pinned line must also be the one
+    the base image ships, inside requires-python."""
+    steps = [s for s in STEPS if re.search(r"(?m)^\s*uses:\s*actions/setup-python@", s)]
+    assert len(steps) == 2, "expected one setup-python step in each job"
+    for step in steps:
+        assert re.search(r"(?m)^\s*with: \{ python-version-file: \.python-version \}\s*$", step), step
+        assert "python-version:" not in step, step
+    base_python = _versions_env("BASE_PYTHON_VERSION")
+    assert base_python == PYTHON_VERSION_FILE or base_python.startswith(PYTHON_VERSION_FILE + "."), (
+        f".python-version {PYTHON_VERSION_FILE} is not the line of BASE_PYTHON_VERSION {base_python}"
+    )
+    requires = re.search(r'(?m)^requires-python = ">=([0-9.]+),<([0-9.]+)"$', PYPROJECT)
+    assert requires, "requires-python must be the range >=<lowest patch>,<<next minor>"
+    version = tuple(int(part) for part in base_python.split("."))
+    lowest = tuple(int(part) for part in requires.group(1).split("."))
+    ceiling = tuple(int(part) for part in requires.group(2).split("."))
+    assert lowest <= version < ceiling, f"BASE_PYTHON_VERSION {base_python} is outside {requires.group(0)}"

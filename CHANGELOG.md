@@ -4,6 +4,15 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+### Fixed
+- `core-update.yml`'s two `setup-python` steps read `.python-version` (`python-version-file`) instead of carrying a
+  literal copy of it, so the interpreter is named in one place. A literal copy drifts: in the Cloud Crawler add-on,
+  whose `pull-request` job also forbids uv's own Python downloads, `3.14` drifted against `3.14.6` and its scheduled
+  run failed with `No interpreter found` (its run 41944145931). This repository's `pull-request` job does not forbid
+  downloads, so the same drift would have been hidden by a download rather than failing; the file-read removes it
+  either way. `tests/security/test_core_update_app_token.py` pins the file-read and keeps `BASE_PYTHON_VERSION` on
+  the line `.python-version` names, inside `requires-python`.
+
 ### Security
 - `core-update.yml` now runs from `main` only, and auto-merge no longer listens to the `bump` job's report. These are
   two High findings from a review of the same two-job workflow in the MigrateOrchestrator add-on
