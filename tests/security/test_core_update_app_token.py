@@ -265,11 +265,13 @@ def _versions_env(key: str) -> str:
 
 
 def test_setup_python_installs_the_interpreter_python_version_names():
-    """`uv lock` in the pull-request job runs with UV_PYTHON_DOWNLOADS=never, so the interpreter setup-python installs
-    must satisfy `.python-version` exactly: with a literal copy of the version in the workflow the two drifted
-    (`.python-version` 3.14.6, setup-python `3.14` handing out 3.14.10) and every scheduled run failed with
-    `No interpreter found for Python 3.14.6` (run 41944145931, 2026-11-05). Both jobs now read the file, so there is
-    one place to move. The pinned line must also be the one the base image ships, inside requires-python."""
+    """Both setup-python steps read `.python-version` rather than carrying a literal copy of it, so there is one place
+    to move the interpreter. A literal copy drifts: in the Cloud Crawler add-on, whose pull-request job also forbids
+    uv's own Python downloads, `.python-version` said 3.14.6 while setup-python's `3.14` handed out 3.14.10, and every
+    scheduled run failed with `No interpreter found for Python 3.14.6` (its run 41944145931, 2026-11-05). This
+    repository's pull-request job lets uv download an interpreter, so the same drift would have hidden behind a
+    download instead of failing; reading the file removes the drift either way. The pinned line must also be the one
+    the base image ships, inside requires-python."""
     steps = [s for s in STEPS if re.search(r"(?m)^\s*uses:\s*actions/setup-python@", s)]
     assert len(steps) == 2, "expected one setup-python step in each job"
     for step in steps:
