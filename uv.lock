@@ -162,7 +162,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cloud-assessor-core", url = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.0/cloud_assessor_core-0.3.0-py3-none-any.whl" },
+    { name = "cloud-assessor-core", url = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.2/cloud_assessor_core-0.3.2-py3-none-any.whl" },
     { name = "fastapi", specifier = "==0.162.0" },
     { name = "pydantic", specifier = "==2.14.1" },
     { name = "uvicorn", specifier = "==0.54.0" },
@@ -179,13 +179,13 @@ dev = [
 
 [[package]]
 name = "cloud-assessor-core"
-version = "0.3.0"
-source = { url = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.0/cloud_assessor_core-0.3.0-py3-none-any.whl" }
+version = "0.3.2"
+source = { url = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.2/cloud_assessor_core-0.3.2-py3-none-any.whl" }
 dependencies = [
     { name = "pydantic" },
 ]
 wheels = [
-    { url = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.0/cloud_assessor_core-0.3.0-py3-none-any.whl", hash = "sha256:432fdcd1c739450e44028ea861fdbd2b89c1d730910bba2669bdb501321708b8" },
+    { url = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.2/cloud_assessor_core-0.3.2-py3-none-any.whl", hash = "sha256:878d0d45a971ad567cc80f862ada6594aba3fcc4ba1e79383e6da7bdb1a66ca2" },
 ]
 
 [package.metadata]
