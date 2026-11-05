@@ -5,19 +5,20 @@
 this file before you change behaviour here, so you know what upstream already did and what is still waiting to be adopted,
 and add an entry (newest first) whenever you adopt an upstream change or find that one reaches this repository.
 
-Last updated: 2026-10-31, from a clone of the App's tag `v0.2.1` (commit `55b7242`); the table and the entries dated
-2026-10-24 were checked against GitHub and the App's `main` at `e22603c` on that date and are not re-checked here. Where
-something was not checked, it says so.
+Last updated: 2026-11-04, from a clone of the App's `main` at `e1fc194` and this repository's `main` at `8aff24e`. The
+rows of the table that changed since 2026-10-31 were re-read on that date; the section "Adopting `v0.2.1`" below
+describes the mechanism as it was before the first adoption and is kept as history. Where something was not checked,
+it says so.
 
 ## Current upstream state
 
 | Question | Answer |
 |---|---|
 | Who owns the engine? | The App. It was seeded here (`ADR-0001`), the App adopted it unchanged, and since then engine and catalog changes are made upstream, released, and adopted here. Do not edit `packages/cloud-assessor-core` in this repository. |
-| Latest App releases | [`v0.2.1`](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.2.1) (2026-10-18, tag commit `55b7242`) and [`v0.2.0`](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.2.0) (2026-10-12, tag commit `6821e30`). There is no `v0.1.0` tag in the App. |
-| Engine wheel to pin | `cloud_assessor_core-0.2.1-py3-none-any.whl` from the `v0.2.1` release. sha256 `6c5564ba0bc82c79060704dd52871e56b51b709c9ee8bdd7b6b7cf0409ca26e7` (downloaded and hashed; it matches the digest GitHub shows). The `v0.2.0` wheel is `31fde826a3ff0dccfcaee084a00e86df83e28473567dfdb75ad74319425bc638` (digest as GitHub shows it; not downloaded). |
-| What this repository has | The original seed, engine `0.1.0`, catalog `1.0.0`, under `packages/cloud-assessor-core` (a workspace member). Since 2026-10-31 its dependency line in `pyproject.toml` carries the marker `CORE_REF v0.1.0-seed`, so `core-update.yml` is armed: its next run sees `v0.2.1` and opens the adoption pull request itself (see "Adopting `v0.2.1`" below). |
-| Drift | Behind by two releases until that pull request merges. |
+| Latest App releases | [`v0.3.0`](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.3.0) (2026-10-26), after [`v0.2.1`](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.2.1) (2026-10-18) and [`v0.2.0`](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.2.0) (2026-10-12). Newest: [`v0.3.2`](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.3.2) (2026-11-04). `0.3.1` ([#81](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/81)) was tagged on 2026-11-04 but published nothing (the changelog guard stopped every tag workflow); `0.3.2` ([#88](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/88)) carries the same widening and makes the App's dry run check the changelog. There is no `v0.1.0` tag in the App. |
+| Engine wheel to pin | `cloud_assessor_core-0.3.2-py3-none-any.whl` from the `v0.3.2` release, sha256 `878d0d45a971ad567cc80f862ada6594aba3fcc4ba1e79383e6da7bdb1a66ca2` (as `uv.lock` records it since this pull request; before it, the `v0.3.0` wheel, sha256 `432fdcd1c739450e44028ea861fdbd2b89c1d730910bba2669bdb501321708b8`). This pull request moved it to `cloud_assessor_core-0.3.2-py3-none-any.whl` from the `v0.3.2` release, sha256 `878d0d45a971ad567cc80f862ada6594aba3fcc4ba1e79383e6da7bdb1a66ca2` (see the entry dated 2026-11-04, 21:35 UTC). Earlier wheels: `v0.2.1` `6c5564ba0bc82c79060704dd52871e56b51b709c9ee8bdd7b6b7cf0409ca26e7`, `v0.2.0` `31fde826a3ff0dccfcaee084a00e86df83e28473567dfdb75ad74319425bc638`. |
+| What this repository has | The `v0.3.2` release wheel, pinned by URL in `pyproject.toml` (`CORE_REF v0.3.2`) with its sha256 in `uv.lock`, since this pull request (2026-11-04). The first adoption was the `v0.3.0` wheel in [#69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69) (2026-10-31; `core-update.yml` opened it and the seed under `packages/cloud-assessor-core` is gone). Engine `0.3.2`, catalog `1.1.0`. |
+| Drift | None against the latest release. The `v0.3.2` wheel is needed before this repository can build on Python 3.15 (entries dated 2026-11-04). |
 | Does the App's version match its tags? | No, by design for now: the App's own `pyproject.toml` says `0.1.0`, the engine and the tags are `0.2.x`. The policy is an open owner decision (App [#33](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/33)). The wheel's version is what matters for pinning here. |
 | Protection on the App | Rulesets on `main` (pull request required; checks `lint`, `test`, `boundary`, `catalog-check`, `secret-scan`, `image`, `terraform` required; no force-push or deletion) and on `v*` tags (cannot be moved or deleted), applied on 2026-10-24 with the App's `repository-admin` workflow and read back through the API. A pinned `v*` URL therefore keeps pointing at the same release. Protection on **this** repository was not checked. |
 
@@ -128,6 +129,41 @@ both fictional samples are identical between the seed and `0.2.1` (compared on 2
   repositories hold a separate private key as Dependabot secrets, so rotating this repository's key is unchanged. The
   `core-update.yml` comment and `VALIDATION.md` now say where the App is installed, and the accepted-risk note says a
   stolen key could reach those two repositories as well, whose `main` still needs an approved pull request.
+
+### 2026-11-04, 21:35 UTC: `v0.3.2` is released and this pull request pins it
+
+- The App's `v0.3.1` tag (pushed 2026-11-04 20:51 UTC) published nothing: its `release`, `publish-core` and `publish-images` workflows all stopped at `CHANGELOG.md still has entries under [Unreleased]` (a later merge had added them after the release pull request). A tag cannot be moved or deleted there, so [#88](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/88) released `0.3.2` with the same `Requires-Python` widening and made the manual dry run check the changelog the way the tag run does. Its tag `v0.3.2` (commit 46641cca) ran green: [release](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41916005296), [publish-core](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41916005279), [publish-images](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41916005379); [the release](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.3.2) lists the wheel and the sdist.
+- The pin moved with `scripts/adopt_core_wheel.py --bump --from v0.3.0 --tag v0.3.2`, then `uv lock --no-build --upgrade-package cloud-assessor-core` and `uv lock --check` with CI's uv 0.11.32 on CPython 3.15.2. `uv.lock` records sha256 `878d0d45a971ad567cc80f862ada6594aba3fcc4ba1e79383e6da7bdb1a66ca2` for the wheel, the same value as a fresh download of the release asset.
+
+### 2026-11-04: `v0.3.1` lets the engine install on Python 3.15 (superseded the same day: see the entry above); the pin moves to it on this repository's branch `fix/python-315-base` (App [#81](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/81), website [#1386](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1386))
+
+The website moved its lab base image to Python 3.15.2 on 2026-10-31
+([HCW-HybridCloudWorks#1468](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1468)), and this repository follows
+it on the branch `fix/python-315-base`. That branch could not build its image: the `v0.3.0` wheel says
+`Requires-Python: <3.15,>=3.14.6`, so the image's `pip install --require-hashes` on 3.15.2 stops with `Package
+'cloud-assessor-core' requires a different Python`. Upstream answered with a metadata-only release: App #81 (merged
+2026-11-03 as `11bbf44`) widens the ceiling to `<3.16` and raises the version to `0.3.1`. No engine code changed and the
+catalog stays `1.1.0`. **Reaches this repository: yes.**
+
+Action: once the owner pushes the App tag `v0.3.1` (its `publish-core.yml` builds the wheel, attests it and attaches it
+to the GitHub Release), the dependency line in `pyproject.toml` moves from `v0.3.0` to `v0.3.1` with the usual bump,
+`scripts/adopt_core_wheel.py --bump --from v0.3.0 --tag v0.3.1`, and `uv lock --no-build --upgrade-package
+cloud-assessor-core` (uv 0.11.32, the version CI uses) records the wheel's sha256, on that same branch rather than
+through `core-update.yml`, because the base move and the pin move only build together. The wheel URL will be
+`https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.1/cloud_assessor_core-0.3.1-py3-none-any.whl`. Its sha256 is written here after the tag: this entry was written before the tag existed, and
+`uv.lock` is the record that counts.
+
+Trial on 2026-11-04 (nothing from it is committed): the wheel was built from the App's `main` at `e1fc194` the way
+`publish-core.yml` builds it (Python 3.14, uv 0.11.32, `uv build --no-create-gitignore --package cloud-assessor-core`),
+giving sha256 `431f8ace29bd2042a793201ee01f62924481735fdbacffff7215292dc6f5c1d5` and `Requires-Python: <3.16,>=3.14.6`.
+Served from a local address, it let the branch re-lock with uv 0.11.32 (only the `cloud-assessor-core` entry of `uv.lock`
+changed) and the lab image then built with the Dockerfile unchanged on `python:3.15.2-slim-trixie`. By hand, the `image`
+job's checks passed (the image runs `Python 3.15.2`, equal to `BASE_PYTHON_VERSION`; `azure` is not importable; the
+licence label is `MIT`; the process runs as uid 10001) and `/api/health` answered with catalog `1.1.0`. On Python 3.15.2
+in a container, `ruff check`, `ruff format --check`, `scripts/check-catalog.py`, the `docs/rules/catalog.md` drift check and
+`pytest` (321 passed, 10 skipped, coverage gate 85) passed. Not run: the Playwright suite. If the release is built from a
+commit later than `e1fc194`, the release wheel's sha256 can differ from the trial's; `uv.lock` takes the release's, and
+`gh attestation verify` ties the asset to the App's workflow.
 
 ### 2026-10-31: adoption of `v0.2.1` handed to `core-update.yml` (this repository's branch `chore/adopt-core-v0.2.1`)
 

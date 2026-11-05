@@ -114,7 +114,7 @@ def test_first_adoption_rewrites_the_three_files(tmp_path):
     for name in FILES:
         assert "packages/cloud-assessor-core" not in (root / name).read_text(encoding="utf-8"), name
     dockerfile = (root / "infrastructure/docker/Dockerfile").read_text(encoding="utf-8")
-    assert "COPY src/cloud_assessment_lab /install/lib/python3.14/site-packages/cloud_assessment_lab" in dockerfile
+    assert "COPY src/cloud_assessment_lab /install/lib/python3.15/site-packages/cloud_assessment_lab" in dockerfile
     assert _current_ref(root) == "v0.2.1"
 
 

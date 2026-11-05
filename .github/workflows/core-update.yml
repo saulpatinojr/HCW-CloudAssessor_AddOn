@@ -128,7 +128,7 @@ jobs:
           if [ "$latest" = "$current" ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; echo "already at $current"; else echo "changed=true" >> "$GITHUB_OUTPUT"; echo "$current -> $latest"; fi
       - if: steps.refs.outputs.changed == 'true'
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
-        with: { python-version: "3.14" }
+        with: { python-version: "3.15" }
       - if: steps.refs.outputs.changed == 'true'
         run: python -m pip install "uv==0.11.32"
       - if: steps.refs.outputs.changed == 'true'
@@ -232,7 +232,7 @@ jobs:
           path: ${{ runner.temp }}/bump
       - if: needs.bump.outputs.changed == 'true' && !inputs.probe
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
-        with: { python-version: "3.14" }
+        with: { python-version: "3.15" }
       # The same uv as the bump job, verified by its sha256 (the manylinux x86_64 wheel of uv 0.11.32 on PyPI). When
       # UV_VERSION moves, this hash moves with it (tests/security/test_core_update_app_token.py checks the version).
       - if: needs.bump.outputs.changed == 'true' && !inputs.probe
