@@ -31,6 +31,12 @@ All notable changes to this repository are recorded here. The format follows Kee
     on GitHub yet; see `VALIDATION.md`.
 
 ### Changed
+- **Notes on the HCW Main Admin App now say it is also going on two App repositories.** On 2026-11-04 the owner
+  chose to reuse the App for the lockfile workflow of `HCW-CloudCrawler_App` and `HCW-CloudAssessor_App`
+  (HCW-CloudCrawler_App issue #70), so once it is installed there it covers six repositories, not four. The
+  `core-update.yml` comment and `VALIDATION.md` (key rotation, where the App is installed and the accepted-risk note)
+  now say so. Those two repositories use their own private key, so rotating this repository's key is unchanged.
+  Comments and documentation only.
 - The project's Python floor is `3.15.1` (`requires-python = ">=3.15.1,<3.16"`) and `.python-version` names the minor
   line only, `3.15` (the Makefile's `uv python pin` likewise), not an exact patch: `actions/setup-python` with `3.15`
   hands out whichever 3.15.x its image carries (3.15.1 on one run, 3.15.2 on the next), the pinned uv 0.11.32 cannot

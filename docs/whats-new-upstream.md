@@ -121,6 +121,15 @@ both fictional samples are identical between the seed and `0.2.1` (compared on 2
 
 ## Entries, newest first
 
+### 2026-11-05: the HCW Main Admin App is also used by two App repositories (credential notes only)
+
+- On 2026-11-04 the lockfile workflow upstream (`HCW-CloudAssessor_App`, this edition's App) and in `HCW-CloudCrawler_App` were changed to push Dependabot's regenerated
+  lockfile exports with the HCW Main Admin GitHub App, the App this repository's `core-update.yml` uses ([HCW-CloudCrawler_App#71](https://github.com/saulpatinojr/HCW-CloudCrawler_App/pull/71), [HCW-CloudAssessor_App#87](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/87); owner decision on [HCW-CloudCrawler_App#70](https://github.com/saulpatinojr/HCW-CloudCrawler_App/issues/70)). Once the owner installs it there, the App is on six repositories, not four.
+- **Reaches this edition? Only the notes.** No engine, pin, workflow behaviour or test changes here. Those two
+  repositories hold a separate private key as Dependabot secrets, so rotating this repository's key is unchanged. The
+  `core-update.yml` comment and `VALIDATION.md` now say where the App is installed, and the accepted-risk note says a
+  stolen key could reach those two repositories as well, whose `main` still needs an approved pull request.
+
 ### 2026-11-04, 21:35 UTC: `v0.3.2` is released and this pull request pins it
 
 - The App's `v0.3.1` tag (pushed 2026-11-04 20:51 UTC) published nothing: its `release`, `publish-core` and `publish-images` workflows all stopped at `CHANGELOG.md still has entries under [Unreleased]` (a later merge had added them after the release pull request). A tag cannot be moved or deleted there, so [#88](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/88) released `0.3.2` with the same `Requires-Python` widening and made the manual dry run check the changelog the way the tag run does. Its tag `v0.3.2` (commit 46641cca) ran green: [release](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41916005296), [publish-core](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41916005279), [publish-images](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41916005379); [the release](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.3.2) lists the wheel and the sdist.
