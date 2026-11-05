@@ -9,8 +9,9 @@
 #          place it the same way; the first core-update pull request deletes them (scripts/adopt_core_wheel.py), and
 #          from then on the engine is the upstream release wheel, pinned by URL and sha256 in uv.lock and installed
 #          by the same hash-checked pip step, with its catalog as cloud_assessor_core/catalog_data.
-#   lab    the runtime: apt upgrade, /install copied in, pip/ensurepip/setuptools removed, uid 10001, read-only
-#          friendly (writes nothing), HEALTHCHECK on /api/health through urllib, CMD python -m cloud_assessment_lab.
+#   lab    the runtime: Debian's security updates (see the RUN below for why and how), /install copied in,
+#          pip/ensurepip/setuptools removed, uid 10001, read-only friendly (writes nothing), HEALTHCHECK on
+#          /api/health through urllib, CMD python -m cloud_assessment_lab.
 #
 # The lab edition is technically unable to reach Azure: no cloud SDK is installed, the process refuses to start
 # under an identity endpoint, and publish-images.yml asserts `python -c "import azure"` fails inside this image.
@@ -48,11 +49,29 @@ RUN test "$EDITION" = "lab"
 LABEL org.opencontainers.image.licenses="MIT"
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080 \
     CA_STATIC_DIR=/app/web CA_SAMPLES_DIR=/app/samples CA_FRAME_ANCESTORS="'none'" CA_TELEMETRY=0
-RUN apt-get update \
- && apt-get upgrade -y --no-install-recommends \
+# Debian's security updates, before anything else enters the runtime stage. The base is pinned by digest, but a
+# Debian security upload reaches the mirrors days before the official image is rebuilt with it: on 2026-11-05 the
+# website's Docker Scout gate refused the published image for apt 3.0.3 (CVE-2026-109518, fixed in 3.0.4, only in
+# trixie-security) while the newest python:3.15-slim-trixie digest still shipped 3.0.3, so no base move could clear
+# it (website issue 1562; the NetworkEyes App took the same step in its pull request 349). The parts, each pinned by
+# tests/security/test_image_security_updates.py:
+#   - `Acquire::Retries=0` on every apt-get call: the apt doing this upgrade is still the base's 3.0.3, and
+#     CVE-2026-109518 needs a download retry to slip an unverified package in, so the retry path stays closed until
+#     the upgraded apt is in place (a mirror hiccup then fails the build instead of retrying).
+#   - `--error-on=any` on the update: a missing index (trixie-security above all) fails the build instead of
+#     succeeding with a warning and leaving apt unupgraded.
+#   - PUBLISH_CACHE_BUST, named in the command through printf: the workflows pass a per-run value (run id and
+#     attempt), so this layer's cache key differs on every run and a rebuild of the same commit can never reuse an
+#     older upgrade result after a newer security upload reached the mirrors. The two builds of one publish run
+#     share the value, so the image pushed is the image scanned. Unset on a local build, which is fine: the layer
+#     is then cached as usual.
+ARG PUBLISH_CACHE_BUST=
+RUN printf 'security updates, run: %s\n' "${PUBLISH_CACHE_BUST}" \
+ && apt-get -o Acquire::Retries=0 update --error-on=any \
+ && apt-get -o Acquire::Retries=0 upgrade -y --no-install-recommends \
  && apt-get clean \
- && rm -rf /var/lib/apt/lists/* \
- && python -m pip uninstall -y pip setuptools wheel >/dev/null 2>&1 || true \
+ && rm -rf /var/lib/apt/lists/*
+RUN python -m pip uninstall -y pip setuptools wheel >/dev/null 2>&1 || true \
  && rm -rf /usr/local/lib/python3.15/ensurepip /usr/local/lib/python3.15/site-packages/pip* \
            /usr/local/lib/python3.15/site-packages/setuptools* /usr/local/lib/python3.15/site-packages/wheel* \
            /usr/local/bin/pip* /usr/local/bin/wheel /root/.cache \

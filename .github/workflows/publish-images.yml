@@ -37,7 +37,12 @@ jobs:
         with:
           context: .
           file: infrastructure/docker/Dockerfile
-          build-args: EDITION=lab
+          # PUBLISH_CACHE_BUST: the Dockerfile's security-update layer names it, so a rebuild of the same commit can
+          # never reuse an older upgrade result (website issue 1562). Both builds of this run pass the same value, so
+          # the layer the scan saw is the layer the push below ships.
+          build-args: |
+            EDITION=lab
+            PUBLISH_CACHE_BUST=${{ github.run_id }}-${{ github.run_attempt }}
           load: true
           push: false
           tags: ${{ env.IMAGE }}:scan
@@ -82,7 +87,9 @@ jobs:
         with:
           context: .
           file: infrastructure/docker/Dockerfile
-          build-args: EDITION=lab
+          build-args: |
+            EDITION=lab
+            PUBLISH_CACHE_BUST=${{ github.run_id }}-${{ github.run_attempt }}
           push: true
           tags: |
             ${{ env.IMAGE }}:v${{ steps.version.outputs.version }}
