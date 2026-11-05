@@ -19,6 +19,8 @@ origin/main` over them is empty). The reason for the release is the apt security
 | `uv run ruff check .` and `uv run ruff format --check .` | yes | clean (`All checks passed!`, 56 files already formatted) |
 | `uv run pytest -q tests/security tests/unit` | yes | 312 passed, 9 skipped; the 16 failures and 17 errors are all in `tests/unit/test_adopt_core_wheel.py`, whose tests run `bash -c`, which on this workstation resolves to WSL rather than Git Bash (the known environmental failure; CI runs them on Ubuntu). With that file deselected, plus `tests/end_to_end/test_repository_manifest.py`: 305 passed |
 | `/api/health` and `X-Addon-Version` read `__version__` | yes | `tests/unit/test_api.py` asserts both equal `__version__`; `tests/end_to_end/test_repository_manifest.py` holds `__version__` to `pyproject.toml` and `repository.manifest.json` |
+| `uv run python scripts/check-catalog.py` and its `--doc` output against `docs/rules/catalog.md` | **no** | the catalog and `docs/rules/catalog.md` are untouched by this change; the `catalog-check` job of `ci.yml` runs it on the pull request |
+| Browser suite (`make e2e`, `npx playwright test -c tests/e2e/playwright.config.ts`) | **no** | nothing in `web/` or `src/` changed; the `e2e` job of `ci.yml` runs it on the pull request |
 | Docker image build, the in-image boundary checks, Trivy, and the apt version in a built image | **no**, CI only | the `image` job of `ci.yml` builds one on the pull request; the publish dry run on `main` after the merge is recorded in the pull request |
 | Push, provenance, SBOM, attestation and digest of `v0.1.2` | **no** | only the tag `v0.1.2` publishes, and it is the owner's call |
 | The live lab host | **no** | it runs `0.1.1` until the website pins the new digest |
