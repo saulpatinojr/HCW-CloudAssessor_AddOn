@@ -321,6 +321,9 @@ def _run_body(step: str) -> str:
 
 
 def test_the_compatibility_step_runs_each_check_as_its_own_command():
+    """Under `set -e` bash leaves an `&&` list alone except for its last member, so a check that fails inside such a
+    list is hidden and the step reports success. Every check is therefore a line of its own, and no line joins
+    commands with `&&`, `||` or `;`."""
     compat = _only_in(JOB_TEXT["bump"], "id: compat")
     assert re.search(r"(?m)^ {8}continue-on-error: true\s*$", compat), "its outcome is the label, so the job goes on"
     lines = [line.strip() for line in _run_body(compat).splitlines() if line.strip()]
