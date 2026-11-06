@@ -11,5 +11,5 @@
 rules:
   adhoc-packages:
     ignore:
-      - ci.yml:211
+      - ci.yml:214
       - core-update.yml:179
