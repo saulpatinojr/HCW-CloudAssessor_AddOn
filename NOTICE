@@ -4,7 +4,7 @@ Copyright (c) 2026 Hybrid Cloud Works. Licensed under MIT (see LICENSE).
 [REVIEW REQUIRED] License: the upstream product (HCW-CloudAssessor_App, R-003) has not decided its license. This edition
 needs one now and uses MIT to match the sibling AddOn; the owner confirms or replaces it before publication.
 
-[REVIEW REQUIRED] Attribution (R-005): the criteria in packages/cloud-assessor-core/catalog/criteria.json are paraphrased
+[REVIEW REQUIRED] Attribution (R-005): the criteria in the cloud-assessor-core engine's catalog (criteria.json, released by HCW-CloudAssessor_App) are paraphrased
 from the FinOps Foundation Framework (https://www.finops.org/framework/) and the Microsoft Azure Well-Architected
 Framework and Azure product documentation (https://learn.microsoft.com/), each with a reference link and a retrieval
 date. No framework text is reproduced; `text` is the single replaceable field per criterion. This project is not
