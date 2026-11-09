@@ -31,10 +31,9 @@ no account and nothing to install in Azure: you export, you upload, you read.
 flowchart LR
   App["HCW-CloudAssessor_App<br/>upstream: holds the engine and the appliance edition on Azure"]
   subgraph AddOn["HCW-CloudAssessor_AddOn (this repository)"]
-    Core["packages/cloud-assessor-core<br/>engine seed: model · ingestion · catalog · evaluators · score · reports"]
     Lab["src/cloud_assessment_lab<br/>lab edition: FastAPI, upload-only, in-memory"]
     Pane["web/<br/>vanilla pane, HCW theme tokens"]
-    Core --> Lab --> Pane
+    Lab --> Pane
   end
   Image["docker.io/hybridcloudworks/img-ca-lab-addon<br/>scanned, by digest"]
   Host["lab host<br/>cloud-assessment.lab.hybridcloudworks.com (port 18083, loopback)"]
@@ -42,17 +41,17 @@ flowchart LR
   Lab -- "publish-images.yml on v* tags" --> Image
   Image -- "website repo: addons Ansible role, digest in group_vars" --> Host
   Host -- "frame + status proxy" --> Site
-  Core -. "seed adopted upstream (ADR-0001); the App now releases the engine" .-> App
+  App -- "engine wheel (model · ingestion · catalog · evaluators · score · reports), pinned by URL and sha256" --> Lab
   App -. "every release: core-update PR (compatible / needs-adaptation)" .-> AddOn
 ```
 
 The engine was seeded **here** so the lab could ship first, and the App has since adopted it unchanged
 ([`docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md`](docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md)).
-The App now owns the engine and has released it as `v0.2.0` and `v0.2.1`. The dependency line in `pyproject.toml`
-carries the marker `CORE_REF v0.1.0-seed`, so `.github/workflows/core-update.yml` (every six hours) sees the newer
-release and opens the adoption pull request itself: it pins the wheel by URL, `uv lock` records its sha256, and the seed
-copy is deleted. After that the same workflow brings each later release as a pull request tested against this edition's
-suites.
+The App now owns and releases the engine. This repository installs the release wheel, pinned by URL on the
+`# CORE_REF` line of `pyproject.toml` and by sha256 in `uv.lock`; the seed copy was deleted when the first wheel was
+adopted ([pull request 69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69)).
+`.github/workflows/core-update.yml` (every six hours) brings each later release as a pull request tested against this
+edition's suites.
 What is behind, and the steps to adopt: [`docs/whats-new-upstream.md`](docs/whats-new-upstream.md). Nothing here can reach Azure: `tests/security/test_edition_boundary.py` fails the build
 if anything could, and `publish-images.yml` proves `import azure` fails inside the built image.
 
@@ -76,7 +75,7 @@ Requires Python 3.15.2 or newer and [`uv`](https://docs.astral.sh/uv/) 0.11.32 o
 
 ```bash
 uv python pin 3.15 && uv sync --all-packages
-uv run pytest -q --cov=packages --cov=src          # unit, contract, security, manifest; coverage gate 85
+uv run pytest -q --cov=src                          # unit, contract, security, manifest; coverage gate 85
 CA_ALLOW_NO_TURNSTILE=1 PORT=8080 uv run python -m cloud_assessment_lab   # http://127.0.0.1:8080
 curl -s http://127.0.0.1:8080/api/health
 curl -s -X POST http://127.0.0.1:8080/api/assessments -H 'content-type: application/json' --data-binary @samples/sample-resource-graph.json
@@ -86,7 +85,7 @@ PowerShell:
 
 ```powershell
 uv python pin 3.15; uv sync --all-packages
-uv run pytest -q --cov=packages --cov=src
+uv run pytest -q --cov=src
 $env:CA_ALLOW_NO_TURNSTILE = "1"; $env:PORT = "8080"; uv run python -m cloud_assessment_lab
 Invoke-RestMethod http://127.0.0.1:8080/api/health
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8080/api/assessments -ContentType application/json -InFile samples/sample-resource-graph.json
@@ -100,7 +99,6 @@ answer `503 turnstile_not_configured` (fail closed). Browser suite: `make e2e` (
 
 | Path | What |
 |---|---|
-| [`packages/cloud-assessor-core`](packages/cloud-assessor-core/README.md) | The engine seed (pydantic only): `model.py` (`MODEL_VERSION = 1`), `paths.py`, `ingestion/`, `catalog/` with `criteria.json`, `schema.json`, `scoring.json`, `evaluate/` (six evaluator kinds), `score.py`, `report/`, `redaction.py`, and its tests |
 | `src/cloud_assessment_lab` | The lab application: `config.py` (`CA_*`), `edition.py` (import-time guard), `store.py`, `security/` (verification, headers, CORS, limits, rate limit, content-free logging), `routes/`, `app.py`, `__main__.py` |
 | `web/` | The pane: `index.html`, `app.js`, `styles.css`, `theme.css` (HCW tokens copied with provenance) |
 | `samples/` | 40 fictional rows (subscription `00000000-0000-0000-0000-000000000001`, `hcw-sample-*`, `eastus2`) in three export shapes; results pinned in a test |

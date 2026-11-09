@@ -2,10 +2,10 @@ version: 2
 updates:
   # uv, not pip (2026-10-16). The pip updater rewrote pyproject.toml and the committed requirements export but never
   # uv.lock, so every one of its pull requests failed CI. uv updates pyproject.toml and uv.lock together, and the image
-  # build exports uv.lock itself (infrastructure/docker/Dockerfile), so nothing else has to move. The workspace root
-  # pins every runtime dependency exactly; the engine under packages/ declares a compatible range, so one entry here
-  # covers both while the engine is the seed. The App's engine must carry the same range before its wheel is adopted
-  # (saulpatinojr/HCW-CloudAssessor_App#15). pydantic-core is not a direct dependency: it moves with pydantic.
+  # build exports uv.lock itself (infrastructure/docker/Dockerfile), so nothing else has to move. pyproject.toml pins
+  # every runtime dependency exactly. The engine is the App's release wheel, pinned by URL and sha256; Dependabot does
+  # not move it (core-update.yml does), and its declared ranges must admit the pins here, or `uv lock` fails.
+  # pydantic-core is not a direct dependency: it moves with pydantic.
   - package-ecosystem: uv
     directory: /
     schedule: { interval: weekly }

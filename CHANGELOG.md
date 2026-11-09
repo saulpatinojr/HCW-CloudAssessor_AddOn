@@ -4,6 +4,12 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- **`CLAUDE.md` and the pull request template describe the engine as it is installed today.** Both still described the `packages/cloud-assessor-core` seed, which was deleted when the first release wheel was adopted ([pull request 69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69)): `CLAUDE.md` said the seed was "two releases behind" and waiting for adoption, told sessions to run `pytest --cov=packages`, and pointed at `catalog/scoring.json` and `--write-schema`, which refuses an installed wheel. Both now say the engine and its catalog arrive as the App's release wheel (pinned by URL and sha256), name `pytest -q --cov=src` as the check, and the template's catalog and engine sections become one section for a wheel bump.
+- **CI measures coverage on `src/` only, without a check for the deleted engine seed.** The coverage step in `ci.yml` added `--cov=packages` when `packages/cloud-assessor-core/pyproject.toml` existed. That file went with the seed when the first release wheel was adopted ([pull request 69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69)), so the branch could never run again; the step now runs `pytest -q --cov=src` directly, with the same 85 percent gate. `make test` drops the same dead check. The `adhoc-packages` ignore in `.github/zizmor.yml` follows the Playwright install line, which moved from line 218 to 216 of `ci.yml`. The comment in `.github/dependabot.yml`, the README (its diagram, its test commands and a table row that linked the deleted `packages/cloud-assessor-core/README.md`), `AGENTS.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md`, `SECURITY.md`, the attribution line in `NOTICE` and `.github/CODEOWNERS` stop describing the seed as present. The first-adoption code in `core-update.yml` (which deletes the seed) is left as it is: it no longer runs, and removing it is a separate change.
+- **The entry for [pull request 85](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/85) moves here from `[0.1.3]`.** It was filed under the already-tagged 0.1.3 release by mistake; that change merged after the tag.
+
 ## [0.1.3] - 2026-11-09
 
 This release exists to rebuild the published image so that it carries Debian's fixed zlib. Docker Scout (the scanner
@@ -31,8 +37,6 @@ The version moves from `0.1.2` to `0.1.3` in `pyproject.toml`, in `uv.lock` (the
 keeps `info.version: 0.1.0`, because that field is the version of the API document and the API has not changed.
 
 ### Fixed
-
-- **`CLAUDE.md` and the pull request template describe the engine as it is installed today.** Both still described the `packages/cloud-assessor-core` seed, which was deleted when the first release wheel was adopted ([pull request 69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69)): `CLAUDE.md` said the seed was "two releases behind" and waiting for adoption, told sessions to run `pytest --cov=packages`, and pointed at `catalog/scoring.json` and `--write-schema`, which refuses an installed wheel. Both now say the engine and its catalog arrive as the App's release wheel (pinned by URL and sha256), name `pytest -q --cov=src` as the check, and the template's catalog and engine sections become one section for a wheel bump.
 
 - **The notes say where the HCW Main Admin App is installed today.** `VALIDATION.md` and the comments in `.github/workflows/core-update.yml` said the App "is being added" to HCW-CloudCrawler_App and HCW-CloudAssessor_App, or would be there "once the owner adds it"; it has been installed there since 2026-11-05. The proof run is tracked on [HCW-CloudCrawler_App#70](https://github.com/saulpatinojr/HCW-CloudCrawler_App/issues/70). Wording only.
 
