@@ -4,6 +4,32 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-09
+
+This release exists to rebuild the published image so that it carries Debian's fixed zlib. Docker Scout (the scanner
+behind the website's gate, which refuses a lab image with a known, fixable vulnerability) found two HIGH zlib
+vulnerabilities, CVE-2026-76844 and CVE-2026-85091, in the published `img-ca-lab-addon:v0.1.2`
+([website issue 1600](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1600)). Nothing in this repository
+has to change to fix them: the image's last stage already applies Debian's security updates on every publish run, with
+a per-run cache bust so an older upgrade result is never reused (the Security entry of `0.1.2` below). An image that is
+already published does not change, though, so the fix reaches the lab host only through a new build, and a new build
+is published only by a new tag. The image is published by the tag `v0.1.3`, which is the owner's call and is not made by
+the pull request that prepares this version.
+
+The lab application's own code did not change since `v0.1.2`: `src/` (apart from the version string), the pane
+(`web/`), the API description (`docs/api/openapi.yaml`) and the samples are identical. What landed on `main` since
+`v0.1.2` is listed under "Fixed" and "Changed" below: the base image moved to the website's current digest of
+`python:3.15.2-slim-trixie` (`sha256:e97b88e416c3…`), CI lints the workflows and the Dockerfile, a wording fix in the
+notes, and two dependency updates that are not listed separately (hatchling, the build backend, 1.32.4 to 1.33.0 in
+[pull request 78](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/78), and two pinned GitHub Actions in
+[pull request 79](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/79)). The engine pin stays
+`cloud-assessor-core 0.3.2`.
+
+The version moves from `0.1.2` to `0.1.3` in `pyproject.toml`, in `uv.lock` (the `cloud-assessment-lab` entry only), in
+`__version__` (`src/cloud_assessment_lab/__init__.py`), in `repository.manifest.json` and in the two sample lines of
+`docs/operations/runbook.md`, so `/api/health` and the `X-Addon-Version` header say `0.1.3`. `docs/api/openapi.yaml`
+keeps `info.version: 0.1.0`, because that field is the version of the API document and the API has not changed.
+
 ### Fixed
 
 - **The notes say where the HCW Main Admin App is installed today.** `VALIDATION.md` and the comments in `.github/workflows/core-update.yml` said the App "is being added" to HCW-CloudCrawler_App and HCW-CloudAssessor_App, or would be there "once the owner adds it"; it has been installed there since 2026-11-05. The proof run is tracked on [HCW-CloudCrawler_App#70](https://github.com/saulpatinojr/HCW-CloudCrawler_App/issues/70). Wording only.

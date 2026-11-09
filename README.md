@@ -123,6 +123,10 @@ Release `0.1.2` is the first image whose last stage applies Debian's security up
 stale, so it carries apt `3.0.4` and clears the website's Docker Scout gate (website issue
 [1562](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1562)). It is published by the tag `v0.1.2`, which
 is the owner's call and is not made by the pull request that prepares it.
+Release `0.1.3` changes nothing but the version: it is a rebuild, so the image carries Debian's fixed zlib and clears
+CVE-2026-76844 and CVE-2026-85091, which Docker Scout found in `v0.1.2` (website issue
+[1600](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1600)). It is published by the tag `v0.1.3`, which
+is the owner's call and is not made by the pull request that prepares it.
 
 ## What the export cannot show
 
