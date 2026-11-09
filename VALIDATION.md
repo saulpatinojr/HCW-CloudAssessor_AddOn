@@ -3,6 +3,32 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-11-09 (release 0.1.3 prepared)
+
+Toolchain: the authoring container (Linux, no Docker daemon). Its only Python 3.15 is `3.15.0b4`, which the project's
+`requires-python = ">=3.15.1,<3.16"` refuses, so `uv sync` and `uv lock` could not run here. The checks ran in a scratch
+virtual environment on `3.15.0b4` instead: the third-party set from `uv export --frozen --no-hashes --all-groups
+--all-packages --no-emit-project` (uv 0.11.32, CI's `UV_VERSION`), with the engine wheel `cloud_assessor_core-0.3.2`
+downloaded from the App's `v0.3.2` release and installed from a local file (its sha256 `878d0d45…6ca2` matches the one
+`uv.lock` records), and the lab application on `PYTHONPATH=src`. This run prepares the version bump only: the reason
+for the release is a rebuild of the image so it carries Debian's fixed zlib (CVE-2026-76844 and CVE-2026-85091, website
+issue 1600). Nothing in `src/` (apart from `__version__`), `web/`, `samples/` or `docs/api/` changed since `v0.1.2`. No
+image was built here.
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| The lab application's version in every place that states it: `pyproject.toml`, `uv.lock` (the `cloud-assessment-lab` entry only), `__version__`, `repository.manifest.json` and the two sample lines in `docs/operations/runbook.md` | yes | all `0.1.3`. The `uv.lock` line was edited by hand (the one `version` line of the `[[package]]` whose `source = { editable = "." }`, the same one line `uv lock` changed for `0.1.2`), because `uv lock` refuses the container's Python. The engine pin stays `cloud-assessor-core 0.3.2` |
+| `docs/api/openapi.yaml`, `info.version` | decided, not changed | stays `0.1.0`, for the reason recorded in the run of 2026-10-27 |
+| `uv lock --check` | **no** | refused here for the Python version above; the `lint` job of `ci.yml` runs it on the pull request |
+| `ruff check .` and `ruff format --check .` | yes | clean (`All checks passed!`, 56 files already formatted) |
+| `python scripts/check-catalog.py`, and its `--doc` output against `docs/rules/catalog.md` | yes | `catalog 1.1.0: 25 criteria, 25 with learnUrl marked [VERIFY]`, exit 0; the generated document is identical to the committed one |
+| `pytest -q --cov=src` (all of `tests/`) | yes | 348 passed, 10 skipped (the `test_adopt_core_wheel.py` cases that apply only before the first adoption), coverage 96.01% |
+| Browser suite (`make e2e`, `npx playwright test -c tests/e2e/playwright.config.ts`) | **no** | nothing in `web/` or `src/` changed beyond the version string; the `e2e` job of `ci.yml` runs it on the pull request |
+| The image's last stage applies Debian's security updates on every publish run | read, not built | `infrastructure/docker/Dockerfile` lines 68 to 73: `ARG PUBLISH_CACHE_BUST=`, then `apt-get update --error-on=any` and `apt-get upgrade -y` with the cache bust named in the command; `tests/security/test_image_security_updates.py` pins it and passed above |
+| Docker image build, the in-image boundary checks, Trivy, and the zlib version in a built image | **no**, CI only | the `image` job of `ci.yml` builds one on the pull request; the publish dry run on `main` after the merge is recorded in the pull request |
+| Push, provenance, SBOM, attestation and digest of `v0.1.3` | **no** | only the tag `v0.1.3` publishes, and it is the owner's call |
+| The live lab host | **no** | it runs the earlier image until the website pins the new digest |
+
 ## Run 2026-11-05 (release 0.1.2 prepared)
 
 Toolchain: Python 3.15 (`.python-version`), uv 0.12.0 for the checks and `uvx uv@0.11.32 lock` for the lock file (CI's
