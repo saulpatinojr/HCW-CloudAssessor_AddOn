@@ -6,20 +6,14 @@
 
 - [ ] `uv run ruff check . && uv run ruff format --check .` — result:
 - [ ] `uv run python scripts/check-catalog.py` — result:
-- [ ] `uv run pytest -q --cov=packages --cov=src` — result (tests, coverage):
+- [ ] `uv run pytest -q --cov=src` — result (tests, coverage):
 - [ ] `npx playwright test -c tests/e2e/playwright.config.ts` — result, or CI run link:
 - [ ] Checks not run and why:
 
-## Catalog (if `packages/cloud-assessor-core/catalog/**` changed)
+## Engine and catalog (if the `cloud-assessor-core` wheel pin in `pyproject.toml` or `uv.lock` changed)
 
-- [ ] `learnUrl` and `retrievedOn` updated for every touched criterion; `verify` left `true` until the owner confirms
-- [ ] Criteria stay paraphrased and attributed (R-005); only `text`, `title`, `remediation` carry prose
-- [ ] `docs/rules/catalog.md` regenerated (`make rules-doc`) and `schema.json` regenerated if the model changed
-
-## Engine (if `packages/cloud-assessor-core/src/**` changed)
-
-- [ ] The engine is owned upstream (ADR-0001): this change adopts an `HCW-CloudAssessor_App` release unchanged, and `docs/whats-new-upstream.md` records it; `MODEL_VERSION` bumped only if `Resource` changed
-- [ ] No FastAPI, HTTP or cloud SDK import entered the package
+- [ ] The engine and its catalog are owned upstream (ADR-0001): this change adopts an `HCW-CloudAssessor_App` release wheel unchanged, by URL and sha256, and `docs/whats-new-upstream.md` records it
+- [ ] `docs/rules/catalog.md` regenerated (`make rules-doc`) from the new wheel's catalog
 
 ## Infrastructure (if `infrastructure/**` or `docker-compose.yml` changed)
 

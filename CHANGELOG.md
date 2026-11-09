@@ -6,6 +6,8 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ### Fixed
 
+- **`CLAUDE.md` and the pull request template describe the engine as it is installed today.** Both still described the `packages/cloud-assessor-core` seed, which was deleted when the first release wheel was adopted ([pull request 69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69)): `CLAUDE.md` said the seed was "two releases behind" and waiting for adoption, told sessions to run `pytest --cov=packages`, and pointed at `catalog/scoring.json` and `--write-schema`, which refuses an installed wheel. Both now say the engine and its catalog arrive as the App's release wheel (pinned by URL and sha256), name `pytest -q --cov=src` as the check, and the template's catalog and engine sections become one section for a wheel bump.
+
 - **The notes say where the HCW Main Admin App is installed today.** `VALIDATION.md` and the comments in `.github/workflows/core-update.yml` said the App "is being added" to HCW-CloudCrawler_App and HCW-CloudAssessor_App, or would be there "once the owner adds it"; it has been installed there since 2026-11-05. The proof run is tracked on [HCW-CloudCrawler_App#70](https://github.com/saulpatinojr/HCW-CloudCrawler_App/issues/70). Wording only.
 
 ### Changed
