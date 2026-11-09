@@ -4,16 +4,15 @@ This is `saulpatinojr/HCW-CloudAssessor_AddOn`, the **lab edition** of the Cloud
 site route `/tools/cloud-assessment`, origin `https://cloud-assessment.lab.hybridcloudworks.com`): a Python 3.15 FastAPI
 application that assesses an uploaded Azure Resource Graph export against a declarative criteria catalog, a vanilla pane
 the website frames, fictional samples, docs, a hardened Dockerfile and SHA-pinned workflows. The engine
-is **owned upstream** by `saulpatinojr/HCW-CloudAssessor_App`: it was seeded here (ADR-0001), the App adopted it unchanged
-and has released it as `v0.2.0` and `v0.2.1` (wheel assets). The copy under `packages/cloud-assessor-core` is the
-original `0.1.0` seed, now two releases behind and **not to be edited**; engine and catalog changes go upstream first and
-arrive here as a release wheel through `core-update.yml`. The dependency line carries `CORE_REF v0.1.0-seed`, so the
-workflow's next run opens the adoption pull request itself (`scripts/adopt_core_wheel.py` rewrites the line to the wheel
-URL, the seed is deleted, `uv lock` records the sha256); once that merges, `packages/` is gone and `--cov=packages` drops.
+is **owned upstream** by `saulpatinojr/HCW-CloudAssessor_App`: it was seeded here (ADR-0001), the App adopted it unchanged,
+and this repository now installs the App's release wheel, pinned by URL in `pyproject.toml` (the `# CORE_REF` line) and by
+sha256 in `uv.lock`. The seed under `packages/` was deleted when the first wheel was adopted (#69); do not re-create it.
+Engine and catalog changes go upstream first and arrive here as a new release wheel through `core-update.yml`, which
+opens the bump pull request.
 **Read `docs/whats-new-upstream.md` before changing behaviour here, and update it when you adopt an upstream change.**
 
 - Run `uv sync --all-packages`, then `uv run ruff check . && uv run ruff format --check .`,
-  `uv run python scripts/check-catalog.py` and `uv run pytest -q --cov=packages --cov=src` before claiming anything
+  `uv run python scripts/check-catalog.py` and `uv run pytest -q --cov=src` before claiming anything
   works; `make e2e` for anything touching the pane or the API. Never claim a check passed that you did not run.
 - Never weaken: the lab's inability to construct an Azure credential (no cloud SDK; `edition.py` refuses to start under
   `IDENTITY_ENDPOINT`/`MSI_ENDPOINT`/`AZURE_CLIENT_SECRET`/`AZURE_FEDERATED_TOKEN_FILE`/`AZURE_CLIENT_ID`/`AZURE_TENANT_ID`;
@@ -21,11 +20,12 @@ URL, the seed is deleted, `uv lock` records the sha256); once that merges, `pack
   `CA_ALLOW_NO_TURNSTILE=1`, local only); owner-token isolation (hashed, constant-time, 404 for foreign ids); the
   5 MB / 5,000-row / 200-item / 120-minute limits; exact-origin CORS; the content-free log writer; the "not production"
   and "no cloud connectivity by design" labels; the `NOT-AN-AUDIT.md` in every bundle.
-- Scoring: severity weights critical 4 / high 3 / medium 2 / low 1; pillar weights in `catalog/scoring.json`; request
+- Scoring: severity weights critical 4 / high 3 / medium 2 / low 1; pillar weights in the engine's `scoring.json`; request
   overrides clamp to [0, 10]; **unknown lowers coverage, never score**. Evaluator kinds are only added, never renamed.
 - Criteria are paraphrased and attributed (`text` is the single replaceable field, R-005); every `learnUrl` stays
-  `verify: true` until the owner confirms it; cite with a `retrievedOn` date. `docs/rules/catalog.md` is generated
-  (`make rules-doc`); `catalog/schema.json` is generated (`scripts/check-catalog.py --write-schema`).
+  `verify: true` until the owner confirms it; cite with a `retrievedOn` date. The catalog ships inside the engine wheel,
+  so a criterion is changed upstream, never here. `docs/rules/catalog.md` is generated from the installed engine's
+  catalog (`make rules-doc`), and CI fails when it drifts.
 - No secrets, tokens, customer inventories or real tenant/subscription ids anywhere, fixtures and tests included.
   Samples use subscription `00000000-0000-0000-0000-000000000001` and `hcw-sample-*` names only.
 - No vendor names in anything a visitor can read (not the host, edge, verification provider or workspace platform):
