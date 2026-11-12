@@ -4,6 +4,10 @@ All notable changes to this repository are recorded here. The format follows Kee
 
 ## [Unreleased]
 
+### Changed
+
+- **Every workflow job that runs Python or Node.js on the runner now chooses the version itself** ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). The GitHub-hosted runner (the machine GitHub lends each job) comes with its own Python 3.14 and Node.js 24, older than the program's floors of Python 3.15 and Node.js 26, and three places used them. Both jobs of `base-update.yml` (`plan` and `open-pr`) now install the Python that `.python-version` names with `actions/setup-python` before they run `scripts/follow_website_base.py`, and the `bump` job of `core-update.yml` installs Node.js 26 with `actions/setup-node` before its browser suite runs `npm`. None of the three keeps a cache (files saved from earlier runs), because each job holds a token or hands its result to the job that opens the pull request. The action pins are the ones `ci.yml` already uses. `tests/security/test_base_update_workflow.py` and `tests/security/test_core_update_app_token.py` check the new steps, the `adhoc-packages` ignore in `.github/zizmor.yml` follows the Playwright install line from line 179 to 185 of `core-update.yml`, and `VALIDATION.md` now lists a run on the chosen Python as not yet seen.
+
 ### Fixed
 
 - **`CLAUDE.md` and the pull request template describe the engine as it is installed today.** Both still described the `packages/cloud-assessor-core` seed, which was deleted when the first release wheel was adopted ([pull request 69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69)): `CLAUDE.md` said the seed was "two releases behind" and waiting for adoption, told sessions to run `pytest --cov=packages`, and pointed at `catalog/scoring.json` and `--write-schema`, which refuses an installed wheel. Both now say the engine and its catalog arrive as the App's release wheel (pinned by URL and sha256), name `pytest -q --cov=src` as the check, and the template's catalog and engine sections become one section for a wheel bump.

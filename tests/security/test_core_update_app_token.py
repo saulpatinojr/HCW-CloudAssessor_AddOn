@@ -294,6 +294,16 @@ def test_setup_python_installs_the_interpreter_python_version_names():
     assert lowest <= version < ceiling, f"BASE_PYTHON_VERSION {base_python} is outside {requires.group(0)}"
 
 
+def test_the_browser_suite_runs_on_the_node_it_chose():
+    """The runner's own Node.js is older than the program's floor (saulpatinojr/HCW-HybridCloudWorks#1707), so the
+    bump job installs Node.js 26 before the compatibility step runs npm, with no cache (files kept from earlier runs).
+    The pull-request job runs no npm at all."""
+    setup = _only("actions/setup-node")
+    assert setup in JOB_TEXT["bump"], "setup-node belongs to the bump job"
+    assert re.search(r"(?m)^\s*with: \{ node-version: 26, package-manager-cache: false \}\s*$", setup), setup
+    assert STEPS.index(setup) < STEPS.index(_only_in(JOB_TEXT["bump"], "id: compat"))
+
+
 # The compatibility step is the one that decides the bump pull request's label and title. It is run here the way GitHub
 # runs it (bash -e), with `uv`, `npm` and `npx` replaced by stubs that fail one check at a time, because a regular
 # expression over its text cannot show that a failure stops it: `set -e` does not exit on a command that fails inside

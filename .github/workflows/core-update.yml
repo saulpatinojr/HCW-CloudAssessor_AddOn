@@ -160,6 +160,12 @@ jobs:
             echo "::warning::docs/rules/catalog.md could not be regenerated from ${LATEST}'s catalog"
           fi
           git --no-pager diff --stat HEAD
+      # The browser suite in the compatibility check runs on Node.js 26, the program's floor, not on the runner's own
+      # older Node.js (saulpatinojr/HCW-HybridCloudWorks#1707). No cache (files kept from earlier runs), so nothing
+      # from another run reaches a job that hands its result to the job holding the key.
+      - if: steps.refs.outputs.changed == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 26, package-manager-cache: false }
       - if: steps.refs.outputs.changed == 'true'
         id: compat
         name: Compatibility check (lint, tests, catalog, browser e2e)

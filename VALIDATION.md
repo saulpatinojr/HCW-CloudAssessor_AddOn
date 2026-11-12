@@ -301,8 +301,10 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   Still unverified: whether the ruleset "Protect main" option "require extra approval for unattributed changes" asks for an approval on a pull
   request into `main` (the proof's pull requests went into the throwaway branch, which that ruleset does not govern; it is read from the first real
   pull request); the first scheduled run (the daily trigger, 07:37 UTC); what happens when the website moves again while a pull request holds a
-  person's commit (only the "left alone" half was seen live); and the runner's own Python version (the script ran, so it is compatible, but the version
-  was not read). Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity. That switches off
+  person's commit (only the "left alone" half was seen live); and a run on the Python that `.python-version` names (since
+  [HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707) both jobs install it with `actions/setup-python`
+  instead of using the runner's own older Python; the script ran on the runner's Python before, and it uses only Python's standard library, but no
+  run on the chosen version has been seen yet). Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity. That switches off
   `base-update` and the weekly `base-follows-website` job together, so after a quiet spell the weekly job is not an independent second
   check. It is also not a full second check at any time: it compares only the image and its digest, so if the website changes only
   `BASE_PYTHON_VERSION` to another minor line, `base-update` refuses and goes red while the weekly job stays green. How to see whether
