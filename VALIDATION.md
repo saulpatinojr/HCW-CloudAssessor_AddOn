@@ -3,6 +3,28 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-11-12 (workflow jobs choose their Python and Node.js; HCW-HybridCloudWorks#1707)
+
+Toolchain: Linux cloud session, uv-managed CPython 3.15.2 (`uv sync --frozen --all-packages` ran). Three jobs ran Python
+or Node.js on the runner's own versions (Python 3.14 and Node.js 24 on the `ubuntu-26.04` image), below the program's
+floors of 3.15 and 26 ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)):
+`base-update.yml` `plan` and `open-pr` (`python3 -I scripts/follow_website_base.py`) and `core-update.yml` `bump`
+(`npm` and `npx` in the compatibility step). Each now installs its version with the pinned `actions/setup-python` (from
+`.python-version`) or `actions/setup-node` (26), with no cache. A new test, `tests/security/test_workflow_runtime_setup.py`,
+fails any workflow step that runs `node`, `npm`, `npx`, `python`, `python3` or `pip` before its job has set the version
+up; it lists no exception in this repository.
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| `tests/security/test_workflow_runtime_setup.py`, the new check over every workflow | yes | 30 passed. Its workflow reader was compared with PyYAML (CPython 3.13, outside the test) on all 367 steps of the four add-ons' workflows: the same jobs, containers and step `name`, `uses` and `run` values |
+| The new check fails when a fix is undone | yes, on a scratch worktree | with the `bump` job's setup-node step removed from `core-update.yml`, 1 failed and 29 passed, naming `core-update.yml > bump > Compatibility check (lint, tests, catalog, browser e2e) > node`; the branch itself passes |
+| `ruff check .`, `ruff format --check .`, `uv lock --check` | yes | `All checks passed!`, 57 files already formatted, lock current |
+| `python scripts/check-catalog.py` | yes | `catalog 1.1.0: 25 criteria, 25 with learnUrl marked [VERIFY]` |
+| `pytest -q --cov=src` (all of `tests/`) | yes | 380 passed, 10 skipped (the same pre-adoption cases as before); coverage 96% |
+| actionlint 1.7.12 (with shellcheck 0.11.0) and zizmor 1.31.1 `--offline` with `.github/zizmor.yml`, the versions `ci.yml` pins | yes | actionlint no findings; zizmor `No findings to report` (2 ignored: the two `npm install @playwright/test` lines) |
+| A real `base-update` run, and a real `core-update` bump, on the chosen versions | **no**, after the merge | `base-update` runs daily at 07:37 UTC; `core-update` only does this work when the App publishes a new release |
+| Browser suite, image build | **no** | nothing in `web/`, `src/` or the Dockerfile changed |
+
 ## Run 2026-11-09 (release 0.1.3 prepared)
 
 Toolchain: the authoring container (Linux, no Docker daemon). Its only Python 3.15 is `3.15.0b4`, which the project's
@@ -301,8 +323,10 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   Still unverified: whether the ruleset "Protect main" option "require extra approval for unattributed changes" asks for an approval on a pull
   request into `main` (the proof's pull requests went into the throwaway branch, which that ruleset does not govern; it is read from the first real
   pull request); the first scheduled run (the daily trigger, 07:37 UTC); what happens when the website moves again while a pull request holds a
-  person's commit (only the "left alone" half was seen live); and the runner's own Python version (the script ran, so it is compatible, but the version
-  was not read). Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity. That switches off
+  person's commit (only the "left alone" half was seen live); and a run on the Python that `.python-version` names (since
+  [HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707) both jobs install it with `actions/setup-python`
+  instead of using the runner's own older Python; the script ran on the runner's Python before, and it uses only Python's standard library, but no
+  run on the chosen version has been seen yet). Scheduled workflows in a public repository are switched off by GitHub after 60 days without repository activity. That switches off
   `base-update` and the weekly `base-follows-website` job together, so after a quiet spell the weekly job is not an independent second
   check. It is also not a full second check at any time: it compares only the image and its digest, so if the website changes only
   `BASE_PYTHON_VERSION` to another minor line, `base-update` refuses and goes red while the weekly job stays green. How to see whether

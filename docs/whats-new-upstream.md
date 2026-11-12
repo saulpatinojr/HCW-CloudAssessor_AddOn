@@ -121,6 +121,20 @@ both fictional samples are identical between the seed and `0.2.1` (compared on 2
 
 ## Entries, newest first
 
+### 2026-11-12: the App moves to Python 3.15, and its next engine wheel needs it (website [#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707), App [#97](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/97))
+
+- Upstream (`HCW-CloudAssessor_App`) now uses Python 3.15 everywhere it chooses one: `requires-python = ">=3.15.0,<3.16"`
+  in both of its packages, including the engine `cloud-assessor-core` (was `>=3.14.6,<3.16`); its image on
+  `python:3.15.2-slim-trixie`, the same digest as this repository's `infrastructure/docker/versions.env`;
+  `.python-version` and every workflow's `actions/setup-python` name `3.15`; `uv.lock` and both `requirements*.lock.txt`
+  re-locked with uv 0.11.32.
+- **Reaches this edition? Yes, at the next engine release, and nothing here has to change.** The wheel after `v0.3.2`
+  will declare `Requires-Python: <3.16,>=3.15.0` and so no longer installs on Python 3.14. This repository already
+  requires `>=3.15.1,<3.16` and builds on Python 3.15.2, so `core-update.yml` adopts it as usual. The `v0.3.2` pin is
+  unaffected. The App's floor 3.15.0 is the HCW floor; this repository's 3.15.1 is stricter, which is fine. The App's
+  CHANGELOG suggests that release be 0.4.0.
+- Not checked: the release itself, which is not tagged yet.
+
 ### 2026-11-05: the HCW Main Admin App is also used by two App repositories (credential notes only)
 
 - On 2026-11-04 the lockfile workflow upstream (`HCW-CloudAssessor_App`, this edition's App) and in `HCW-CloudCrawler_App` were changed to push Dependabot's regenerated
