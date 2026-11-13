@@ -124,7 +124,7 @@ both fictional samples are identical between the seed and `0.2.1` (compared on 2
 
 ### 2026-11-13: the App's workflows, including the one that builds the engine wheel, move to uv 0.13.8 (website [#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707))
 
-- Upstream (`HCW-CloudAssessor_App`, branch `claude/uv-0138-1707`, not yet merged) moves uv from 0.13.7 to 0.13.8 in
+- Upstream (`HCW-CloudAssessor_App`, [pull request 103](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/103)) moves uv from 0.13.7 to 0.13.8 in
   `ci.yml`, `dependabot-lockfiles.yml`, `security.yml` and `publish-core.yml`. `publish-core.yml` is the workflow that
   builds the engine wheel this repository installs. 0.13.8 is a patch release of uv with no change to the lock format.
 - **Reaches this edition? Only through the next engine wheel, and it makes no difference to it.** The wheel and the
