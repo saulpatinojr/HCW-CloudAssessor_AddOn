@@ -121,6 +121,19 @@ both fictional samples are identical between the seed and `0.2.1` (compared on 2
 
 ## Entries, newest first
 
+### 2026-11-13: the workflow runtime check moves to round two here and in the App (website [#1719](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1719), NetworkEyes_App [#395](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/395))
+
+- The check that every workflow step running Python or Node.js sets its version up first has a second round of rules.
+  Its canonical copy is the Python one in HCW-NetworkEyes_App
+  ([HCW-NetworkEyes_App#395](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/395)); the website's JavaScript
+  twin merged in [HCW-HybridCloudWorks#1719](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1719). This
+  repository's `tests/security/test_workflow_runtime_setup.py` is refreshed from the canonical copy in the same pull
+  request as this entry; only its own lists stay its own.
+- **Reaches this edition? Only as this test.** No engine, catalog, rule, wheel or release change comes with it, so
+  `core-update.yml` has nothing to adopt. The App (HCW-CloudAssessor_App) gets the same change in its own pull request,
+  so its copy (`tests/unit/test_workflow_runtime_setup.py`) and this one stay alike.
+- What the test now reads is in this repository's `CHANGELOG.md` entry of the same date.
+
 ### 2026-11-12: the App moves to Python 3.15, and its next engine wheel needs it (website [#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707), App [#97](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/97))
 
 - Upstream (`HCW-CloudAssessor_App`) now uses Python 3.15 everywhere it chooses one: `requires-python = ">=3.15.0,<3.16"`
