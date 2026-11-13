@@ -180,6 +180,29 @@ def test_the_refs_step_fails_without_a_core_ref(tmp_path):
     assert output == ""
 
 
+def test_both_jobs_refuse_a_seed_pin(tmp_path, bump_run):
+    """A `-seed` pin was the first adoption's marker; that path is gone, so neither job may take one any more."""
+    root = _copy(tmp_path / "refs-repo")
+    pyproject = root / "pyproject.toml"
+    current = _current_ref(root)
+    text = pyproject.read_text(encoding="utf-8")
+    assert f"# CORE_REF {current}\n" in text
+    pyproject.write_text(text.replace(f"# CORE_REF {current}\n", f"# CORE_REF {current}-seed\n"), encoding="utf-8")
+    assert _current_ref(root) == f"{current}-seed"
+    work = tmp_path / "refs-work"
+    work.mkdir()
+    proc, output = _run_refs(root, work, gh_tag="v99.0.0")
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "::error::refusing the CORE_REF" in proc.stdout, proc.stdout + proc.stderr
+    assert output == "", "nothing may reach GITHUB_OUTPUT when the pin is refused"
+
+    repo, temp, _, bin_dir, latest, current = bump_run
+    proc, output = _apply(repo, temp, bin_dir, latest, f"{current}-seed")
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "::error::the pinned CORE_REF is malformed" in proc.stdout, proc.stdout + proc.stderr
+    assert output == "" and _status(repo) == []
+
+
 def test_the_script_refuses_to_run_without_bump(tmp_path):
     root = _copy(tmp_path)
     before = (root / "pyproject.toml").read_text(encoding="utf-8")
