@@ -5,8 +5,9 @@
 this file before you change behaviour here, so you know what upstream already did and what is still waiting to be adopted,
 and add an entry (newest first) whenever you adopt an upstream change or find that one reaches this repository.
 
-Last updated: 2026-11-04, from a clone of the App's `main` at `e1fc194` and this repository's `main` at `8aff24e`. The
-rows of the table that changed since 2026-10-31 were re-read on that date; the section "Adopting `v0.2.1`" below
+Last entry added: 2026-11-13 (the newest entry below). The "Current upstream state" table was last re-read on
+2026-11-04, from a clone of the App's `main` at `e1fc194` and this repository's `main` at `8aff24e`; the rows that
+changed since 2026-10-31 were re-read on that date; the section "Adopting `v0.2.1`" below
 describes the mechanism as it was before the first adoption and is kept as history. Where something was not checked,
 it says so.
 
