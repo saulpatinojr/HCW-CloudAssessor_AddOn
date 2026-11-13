@@ -1,4 +1,4 @@
-# Lint and format settings for both packages and the tests.
+# Lint and format settings for the lab application, its scripts and the tests.
 target-version = "py315"
 line-length = 120
 extend-exclude = [".venv", "web", "docs", "samples"]

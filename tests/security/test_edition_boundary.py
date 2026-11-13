@@ -16,13 +16,19 @@ from ..conftest import ROOT
 FORBIDDEN_PACKAGES = re.compile(r'^(name = "|  )?(azure-|msal|msrest|boto3|botocore)', re.MULTILINE)
 FORBIDDEN_ENDPOINTS = ("management.azure.com", "login.microsoftonline.com", "graph.microsoft.com")
 FORBIDDEN_MODULES = ("azure", "msal", "boto3", "botocore", "msrest")
-SEED = ROOT / "packages" / "cloud-assessor-core"
-# Keyed on a tracked file, not the folder: after the bump merges, `git pull` leaves ignored __pycache__ folders behind.
-SEEDED = (SEED / "pyproject.toml").is_file()
-# The engine is checked wherever it is installed from: the local seed until the first core-update pull request, the
-# upstream release wheel (in site-packages) after it. Directories that do not exist are skipped, never an error.
+# The engine is checked where it is installed: the upstream release wheel, in site-packages. Directories that do not
+# exist are skipped, never an error.
 ENGINE_DIR = Path(cloud_assessor_core.__file__).resolve().parent
-PY_DIRS = [d for d in (ROOT / "packages", ROOT / "src", ROOT / "scripts", ENGINE_DIR) if d.is_dir()]
+PY_DIRS = [d for d in (ROOT / "src", ROOT / "scripts", ENGINE_DIR) if d.is_dir()]
+
+
+def test_the_engine_seed_stays_deleted():
+    # The engine used to be seeded under packages/; pull request 69 deleted it when the release wheel was adopted, and
+    # engine changes are made upstream. Keyed on a tracked file, not the folder: a `git pull` leaves ignored
+    # __pycache__ folders behind.
+    assert not (ROOT / "packages" / "cloud-assessor-core" / "pyproject.toml").exists(), (
+        "packages/cloud-assessor-core is back: the engine is the App's release wheel and is changed upstream"
+    )
 
 
 def _py_files():
@@ -39,8 +45,7 @@ def test_the_installed_engine_declares_no_cloud_sdk():
 
 
 def test_no_cloud_sdk_in_dependency_manifests():
-    names = ["pyproject.toml", "uv.lock"] + (["packages/cloud-assessor-core/pyproject.toml"] if SEEDED else [])
-    for name in names:
+    for name in ("pyproject.toml", "uv.lock"):
         text = (ROOT / name).read_text(encoding="utf-8")
         for pkg in ("azure-", "msal", "msrest", "boto3", "botocore"):
             assert not re.search(rf'name = "{pkg}', text), f"{name} depends on {pkg}"
@@ -119,7 +124,7 @@ def test_the_network_check_leaves_pure_urllib_parse_alone(tmp_path):
 
 
 def test_no_azure_endpoints_in_code_or_pane():
-    for base in [d for d in (ROOT / "packages", ROOT / "src", ROOT / "web", ENGINE_DIR) if d.is_dir()]:
+    for base in [d for d in (ROOT / "src", ROOT / "web", ENGINE_DIR) if d.is_dir()]:
         for path in base.rglob("*"):
             if (
                 path.is_file()

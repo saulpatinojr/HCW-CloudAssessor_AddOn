@@ -1,49 +1,33 @@
 #!/usr/bin/env python
 """Catalog gate: schema drift, learnUrl host allow-list, scoring coverage; optional docs generation.
 
-uv run python scripts/check-catalog.py                 # validate (CI)
-uv run python scripts/check-catalog.py --write-schema  # regenerate catalog/schema.json from the model
-uv run python scripts/check-catalog.py --doc           # print docs/rules/catalog.md (CI checks it for drift)
+uv run python scripts/check-catalog.py        # validate (CI)
+uv run python scripts/check-catalog.py --doc  # print docs/rules/catalog.md (CI checks it for drift)
 
-The catalog is the one the installed engine loads (cloud_assessor_core.catalog.loader.catalog_dir): the seed's
-catalog/ while the engine is the local seed, the wheel's catalog_data once it is the upstream release. --write-schema
-writes only the seed's catalog under packages/ and refuses an installed release (in site-packages, even inside this
-repository's .venv): that catalog is owned upstream (HCW-CloudAssessor_App) and changed there.
+The catalog is the one the installed engine loads (cloud_assessor_core.catalog.loader.catalog_dir): the release wheel's
+catalog_data. That catalog and its schema.json are owned upstream (HCW-CloudAssessor_App) and changed there, so this
+script only reads them. (The --write-schema option wrote the local seed's catalog under packages/; it went with the
+seed.)
 """
 
 from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
 from urllib.parse import urlsplit
 
-ROOT = Path(__file__).resolve().parents[1]
-
-from cloud_assessor_core.catalog.loader import CatalogError, catalog_dir, load_catalog, load_scoring  # noqa: E402
-from cloud_assessor_core.catalog.schema import schema_matches, schema_text  # noqa: E402
-from cloud_assessor_core.model import LEARN_URL_HOSTS  # noqa: E402
+from cloud_assessor_core.catalog.loader import CatalogError, catalog_dir, load_catalog, load_scoring
+from cloud_assessor_core.catalog.schema import schema_matches
+from cloud_assessor_core.model import LEARN_URL_HOSTS
 
 CATALOG_DIR = catalog_dir()
-
-
-def write_schema() -> None:
-    # Only the seed's own catalog/ may be written: the in-project .venv is inside ROOT too, so ROOT is not enough.
-    if not CATALOG_DIR.resolve().is_relative_to(ROOT / "packages") or "site-packages" in CATALOG_DIR.parts:
-        print(
-            f"ERROR: the catalog at {CATALOG_DIR} belongs to the installed engine release; change it upstream",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    (CATALOG_DIR / "schema.json").write_text(schema_text(), encoding="utf-8")
-    print(f"wrote {CATALOG_DIR / 'schema.json'}")
 
 
 def validate() -> int:
     problems: list[str] = []
     schema_path = CATALOG_DIR / "schema.json"
     if not schema_path.is_file() or not schema_matches(schema_path.read_text(encoding="utf-8")):
-        problems.append("schema.json has drifted from the pydantic model (run --write-schema)")
+        problems.append("schema.json has drifted from the pydantic model (the catalog is owned upstream: fix it there)")
     try:
         catalog = load_catalog(CATALOG_DIR, check_schema=False)
     except CatalogError as exc:
@@ -147,9 +131,6 @@ def _check_text(k) -> str:
 
 
 if __name__ == "__main__":
-    if "--write-schema" in sys.argv:
-        write_schema()
-        sys.exit(validate())
     if "--doc" in sys.argv:
         print(doc())
         sys.exit(0)
