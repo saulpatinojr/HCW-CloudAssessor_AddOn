@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tomllib
 
 import pytest
 
@@ -126,10 +127,48 @@ def test_after_the_first_adoption_the_bump_moves_the_pin(tmp_path):
     assert re.fullmatch(r"v\d+\.\d+\.\d+", current), current
     assert 'python scripts/adopt_core_wheel.py --bump --from "$CURRENT" --tag "$LATEST"' in WORKFLOW
     assert "sed -i" not in WORKFLOW, "the pin is moved by an exact replacement, never a sed script"
+    before = (root / "pyproject.toml").read_text(encoding="utf-8")
     assert adopt_core_wheel.main(["--bump", "--from", current, "--tag", "v99.0.0", "--root", str(root)]) == 0
     pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
     assert 'releases/download/v99.0.0/cloud_assessor_core-99.0.0-py3-none-any.whl",  # CORE_REF v99.0.0\n' in pyproject
     assert _current_ref(root) == "v99.0.0"
+    # Exactly two lines move: the pin and the version of the engine's static metadata (CORE_METADATA).
+    changed = [(a, b) for a, b in zip(before.splitlines(), pyproject.splitlines(), strict=True) if a != b]
+    assert changed == [
+        (adopt_core_wheel.pinned_line(current), adopt_core_wheel.pinned_line("v99.0.0")),
+        (adopt_core_wheel.metadata_line(current), adopt_core_wheel.metadata_line("v99.0.0")),
+    ]
+    entry = tomllib.loads(pyproject)["tool"]["uv"]["dependency-metadata"][0]
+    assert entry["name"] == "cloud-assessor-core" and entry["version"] == "99.0.0"
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        lambda t, cur: t.replace("  # CORE_METADATA", "  # CORE-METADATA"),
+        lambda t, cur: t + adopt_core_wheel.metadata_line(cur) + "\n",
+        lambda t, cur: t.replace("# CORE_REF", "#CORE_REF"),
+    ],
+    ids=["no-metadata-marker", "metadata-twice", "no-core-ref-marker"],
+)
+def test_the_bump_refuses_a_pyproject_it_does_not_recognise_and_writes_nothing(tmp_path, edit):
+    """Both lines move or neither: a pin moved without its CORE_METADATA line would leave uv asking the address."""
+    root = _copy(tmp_path)
+    if SEEDED:
+        adopt_core_wheel.adopt(root, "v0.2.1")
+    current = _current_ref(root)
+    text = edit((root / "pyproject.toml").read_text(encoding="utf-8"), current)
+    (root / "pyproject.toml").write_text(text, encoding="utf-8")
+    assert adopt_core_wheel.main(["--bump", "--from", current, "--tag", "v99.0.0", "--root", str(root)]) == 1
+    assert (root / "pyproject.toml").read_text(encoding="utf-8") == text
+
+
+def test_the_bump_refuses_the_same_tag(tmp_path):
+    root = _copy(tmp_path)
+    if SEEDED:
+        adopt_core_wheel.adopt(root, "v0.2.1")
+    current = _current_ref(root)
+    assert adopt_core_wheel.main(["--bump", "--from", current, "--tag", current, "--root", str(root)]) == 1
 
 
 @pytest.mark.parametrize("tag", HOSTILE_TAGS)

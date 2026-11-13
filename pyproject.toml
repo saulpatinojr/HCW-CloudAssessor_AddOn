@@ -18,7 +18,7 @@ dependencies = [
 dev = [
   "pytest==9.1.1",
   "pytest-cov==7.1.0",
-  "ruff==0.17.3",
+  "ruff==0.17.4",
   "httpx==0.28.1",
   "pip-audit==2.10.1",
 ]
@@ -34,6 +34,21 @@ packages = ["src/cloud_assessment_lab"]
 # hatchling refuses to build a project with one unless this is set. Harmless while the engine is the seed.
 [tool.hatch.metadata]
 allow-direct-references = true
+
+# What the engine (the wheel pinned above) depends on, copied from the METADATA file inside the wheel. Why it is here:
+# whenever uv re-resolves the lock (`uv lock`, `uv lock --check`, and Dependabot's uv job for every update it tries),
+# uv 0.13 and later first send a HEAD (a request for the file's headers only) to the wheel's address. GitHub answers
+# with a redirect to a signed download link that answered that HEAD with 401 (not authorised) from a cloud session on
+# 2026-11-13, so the lock failed. With this entry uv does not ask the address at all; the wheel's URL and sha256 in
+# uv.lock are unchanged. The Cloud Crawler add-on has the same entry for the same reason. The version must be the
+# pinned wheel's: core-update.yml moves it with the pin (the CORE_METADATA marker, scripts/adopt_core_wheel.py), and
+# tests/security/test_engine_static_metadata.py compares the entry with the installed wheel. Do not add requires-python
+# here: Dependabot rewrites every requires-python in the lock to the project's. Runbook: "Keeping uv away from the
+# engine's address".
+[[tool.uv.dependency-metadata]]
+name = "cloud-assessor-core"
+version = "0.3.2"  # CORE_METADATA
+requires-dist = ["pydantic<3,>=2.14"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

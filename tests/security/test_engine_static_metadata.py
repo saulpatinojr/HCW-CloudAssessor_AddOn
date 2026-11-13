@@ -1,0 +1,256 @@
+"""The engine's static metadata: the `[[tool.uv.dependency-metadata]]` entry for `cloud-assessor-core`.
+
+uv 0.13 and later re-resolve a lock by first sending a HEAD to the pinned wheel's address, and GitHub's signed download
+link answered that HEAD with 401 (seen from a cloud session on 2026-11-13), so `uv lock` and `uv lock --check` failed.
+With the entry uv does not ask the address. The entry is a copy of the wheel's own METADATA, so these tests hold it to
+the pinned version, to the lock and to the wheel that is really installed. Ported from the Cloud Crawler add-on's
+tests/security/test_engine_adoption.py, which guards the same entry there."""
+
+import re
+import tomllib
+from importlib import metadata
+
+import pytest
+from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
+from packaging.utils import canonicalize_name
+from packaging.version import Version
+
+from ..conftest import ROOT
+
+ENGINE = "cloud-assessor-core"
+UPSTREAM_RELEASES = "https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/"
+PIN = re.compile(
+    r'^\s*"cloud-assessor-core @ (?P<url>' + re.escape(UPSTREAM_RELEASES) + r"(?P<tag>v[0-9][0-9A-Za-z.+-]*)/"
+    r'cloud_assessor_core-(?P<ver>[0-9][0-9A-Za-z.+-]*)-py3-none-any\.whl)",\s*#\s*CORE_REF\s+(?P<ref>v\S+)\s*$',
+    re.MULTILINE,
+)
+METADATA_MARKER = re.compile(r'^version = "(?P<ver>[^"]+)"[ \t]*#[ \t]*CORE_METADATA[ \t]*$', re.MULTILINE)
+
+
+def _pin():
+    match = PIN.search((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert match, "pyproject.toml must carry the one-line CORE_REF pin that core-update.yml rewrites"
+    return match
+
+
+def _static_metadata(document):
+    """The `[[tool.uv.dependency-metadata]]` entries of a parsed pyproject.toml, by package name."""
+    entries = document.get("tool", {}).get("uv", {}).get("dependency-metadata", [])
+    return {canonicalize_name(entry["name"]): entry for entry in entries}
+
+
+def _lock():
+    return tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
+
+
+def _pyproject():
+    return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+
+def _requirements(lines):
+    """Requirement lines in a form that does not depend on how a tool ordered or spaced them. The extras and a URL are
+    part of what is compared: the image installs the lock with `pip --no-deps`, so `pydantic[email]` and `pydantic` are
+    different locks, and a requirement that names a URL is a different file."""
+    found = []
+    for line in lines:
+        requirement = Requirement(line)
+        found.append(
+            (
+                canonicalize_name(requirement.name),
+                tuple(sorted(canonicalize_name(extra) for extra in requirement.extras)),
+                str(requirement.specifier),
+                requirement.url,
+                str(requirement.marker),
+            )
+        )
+    return sorted(found, key=repr)
+
+
+def _extras(values):
+    """Extras names as a set, in their normalised spelling."""
+    return {canonicalize_name(value) for value in values or []}
+
+
+# Every 3.X.Y from 3.0.0 to 3.40.99. packaging cannot say "this range lies inside that range", and a Requires-Python can
+# exclude a single patch release (`!=3.15.3`) or stop at one (`<3.15.9`), so checking only the two ends of the project
+# range would miss those. Testing each version the project range allows is simple and cannot be wrong for a range that
+# lies inside the grid; _python_versions_missing refuses a project range that reaches the grid's top.
+PYTHON_VERSIONS = [Version(f"3.{minor}.{patch}") for minor in range(41) for patch in range(100)]
+
+
+def _python_versions_missing(engine_range, project_range):
+    """The Python versions the project range allows and the engine's Requires-Python does not."""
+    engine, project = SpecifierSet(engine_range or ""), SpecifierSet(project_range)
+    assert PYTHON_VERSIONS[-1] not in project, "the project's requires-python reaches past the versions this test tries"
+    return [str(version) for version in PYTHON_VERSIONS if version in project and version not in engine]
+
+
+def test_engine_has_static_metadata_for_the_pinned_wheel():
+    """Without it uv asks the wheel's address for the wheel's metadata every time it re-resolves the lock, and that
+    request failed with 401. It must be the pinned version's."""
+    entry = _static_metadata(_pyproject()).get(ENGINE)
+    assert entry, "pyproject.toml needs a [[tool.uv.dependency-metadata]] entry for cloud-assessor-core"
+    assert entry.get("version") == _pin()["ver"]
+    assert entry.get("requires-dist"), "the entry must list the engine's dependencies (copy them from the wheel)"
+
+
+def test_static_metadata_carries_the_marker_core_update_moves():
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    found = METADATA_MARKER.findall(text)
+    assert found == [_pin()["ver"]], "exactly one `version = ...  # CORE_METADATA` line, equal to the pinned version"
+
+
+def _step(workflow, header):
+    """The step of core-update.yml whose header holds `header`: from that line to the next step."""
+    start = workflow.index(header)
+    following = re.search(r"(?m)^      - ", workflow[start:])
+    return workflow[start : start + following.start()] if following else workflow[start:]
+
+
+@pytest.mark.parametrize("header", ["name: Bump CORE_REF and re-lock", "id: apply"])
+def test_core_update_moves_the_static_metadata_before_it_locks(header):
+    """Inside the bump job's bump step and the pull-request job's apply step: the file's header comment also says
+    CORE_METADATA, so a search of the whole file would pass even if the move were deleted or moved after `uv lock`.
+    scripts/adopt_core_wheel.py --bump moves the CORE_REF and CORE_METADATA lines together
+    (tests/unit/test_adopt_core_wheel.py)."""
+    step = _step((ROOT / ".github" / "workflows" / "core-update.yml").read_text(encoding="utf-8"), header)
+    move = r'(?m)^\s*python (?:-I )?scripts/adopt_core_wheel\.py --bump --from "\$CURRENT" --tag "\$LATEST"'
+    moved = re.search(move, step)
+    locked = step.find("uv lock --no-build --upgrade-package cloud-assessor-core")
+    assert moved and locked >= 0, "the step must move the pin and the CORE_METADATA version, then lock"
+    assert moved.start() < locked, "the version must be changed before `uv lock` runs"
+    assert not re.search(r"(?m)^\s*sed\s", step), "the pin is moved by an exact replacement, never a sed script"
+
+
+def test_lock_manifest_records_the_same_static_metadata():
+    """`uv lock --check` (ci.yml) already refuses a lock that disagrees with pyproject.toml; this names the reason."""
+    wanted = _static_metadata(_pyproject()).get(ENGINE)
+    recorded = {canonicalize_name(e["name"]): e for e in _lock().get("manifest", {}).get("dependency-metadata", [])}
+    entry = recorded.get(ENGINE)
+    assert wanted and entry, "uv.lock must record the engine's static metadata (run `uv lock`)"
+    assert entry["version"] == wanted["version"]
+    assert _requirements(entry["requires-dist"]) == _requirements(wanted["requires-dist"])
+    assert _extras(entry.get("provides-extras", entry.get("provides-extra"))) == _extras(wanted.get("provides-extra"))
+
+
+def test_static_metadata_does_not_set_requires_python():
+    """Dependabot copies the first `requires-python` in uv.lock over every other one (dependabot-core,
+    lock_file_updater.rb), so a different range in this entry would make the lock of every Dependabot pull request fail
+    `uv lock --check`. The project's own range already limits where the engine can be installed."""
+    assert "requires-python" not in _static_metadata(_pyproject())[ENGINE]
+
+
+def test_every_direct_url_package_in_the_lock_has_static_metadata():
+    """A package pinned by URL with no static metadata makes uv ask that URL on every re-resolve. Any future URL pin
+    must come with its metadata."""
+    given = _static_metadata(_pyproject())
+    urls = [
+        (canonicalize_name(p["name"]), p["version"])
+        for p in _lock()["package"]
+        if isinstance(p.get("source"), dict) and "url" in p["source"]
+    ]
+    assert (canonicalize_name(ENGINE), _pin()["ver"]) in urls, "the engine is expected to be a direct URL package"
+    for name, version in urls:
+        assert name in given and given[name].get("version") == version, f"{name} {version} has no static metadata"
+
+
+def test_static_metadata_matches_the_installed_wheel():
+    """The metadata is a copy. This compares it with the wheel that is really installed, so an upstream release that
+    changes the engine's dependencies fails the bump pull request's compatibility check instead of shipping a lock
+    that does not list them."""
+    entry = _static_metadata(_pyproject())[ENGINE]
+    wheel = metadata.metadata(ENGINE)
+    differing = _entry_differences(entry, wheel["Version"], metadata.requires(ENGINE), wheel.get_all("Provides-Extra"))
+    assert not differing, f"the entry differs from the installed wheel in: {', '.join(differing)}"
+
+
+def _entry_differences(entry, wheel_version, wheel_requires, wheel_extras):
+    """Which of the entry's fields differ from what a wheel says. Extras are compared, not forbidden: a release that
+    gains an extra passes once the entry lists the same extra (`provides-extra`) and its requirements."""
+    found = []
+    if wheel_version != entry["version"]:
+        found.append("version")
+    if _requirements(wheel_requires or []) != _requirements(entry["requires-dist"]):
+        found.append("requires-dist")
+    if _extras(wheel_extras) != _extras(entry.get("provides-extra")):
+        found.append("provides-extra")
+    return found
+
+
+ADAPTED_ENTRY = {
+    "version": "0.4.0",
+    "requires-dist": ["pydantic>=2.14,<3", "email-validator>=2 ; extra == 'email'"],
+    "provides-extra": ["email"],
+}
+ADAPTED_REQUIRES = ["pydantic<3,>=2.14", 'email-validator>=2; extra == "email"']
+
+
+def test_entry_comparison_passes_a_correctly_adapted_bump_that_gains_an_extra():
+    assert _entry_differences(ADAPTED_ENTRY, "0.4.0", ADAPTED_REQUIRES, ["email"]) == []
+
+
+@pytest.mark.parametrize(
+    ("entry_change", "wheel_version", "wheel_requires", "wheel_extras", "expected"),
+    [
+        ({}, "0.5.0", ADAPTED_REQUIRES, ["email"], ["version"]),
+        ({"provides-extra": []}, "0.4.0", ADAPTED_REQUIRES, ["email"], ["provides-extra"]),
+        ({"provides-extra": ["email", "toml"]}, "0.4.0", ADAPTED_REQUIRES, ["email"], ["provides-extra"]),
+        ({}, "0.4.0", ADAPTED_REQUIRES[:1], ["email"], ["requires-dist"]),
+        ({}, "0.4.0", ADAPTED_REQUIRES + ["orjson>=3"], ["email"], ["requires-dist"]),
+        ({}, "0.4.0", ["pydantic[email]<3,>=2.14", ADAPTED_REQUIRES[1]], ["email"], ["requires-dist"]),
+    ],
+)
+def test_entry_comparison_names_every_field_that_differs(
+    entry_change, wheel_version, wheel_requires, wheel_extras, expected
+):
+    entry = {**ADAPTED_ENTRY, **entry_change}
+    assert _entry_differences(entry, wheel_version, wheel_requires, wheel_extras) == expected
+
+
+def test_wheel_accepts_every_python_the_project_allows():
+    """The entry leaves requires-python out on purpose (Dependabot copies the first requires-python in uv.lock over
+    every other one), so this is the only automatic check of the engine's Requires-Python. A release that narrows it
+    below what the project allows fails the bump pull request's compatibility check; a person then decides whether to
+    raise the project's requires-python or not adopt that release (runbook)."""
+    project = _pyproject()["project"]["requires-python"]
+    missing = _python_versions_missing(metadata.metadata(ENGINE).get("Requires-Python"), project)
+    assert not missing, f"requires-python {project} allows Python {missing[0]}..{missing[-1]}, which the engine refuses"
+
+
+@pytest.mark.parametrize(
+    ("engine_range", "first_missing"),
+    [
+        (">=3.15.3", "3.15.1"),
+        ("<3.15.9", "3.15.9"),
+        ("!=3.15.3", "3.15.3"),
+        (">=3.15.1,<3.15.12", "3.15.12"),
+        (">=3.16", "3.15.1"),
+    ],
+)
+def test_python_range_check_notices_a_narrower_engine(engine_range, first_missing):
+    assert _python_versions_missing(engine_range, ">=3.15.1,<3.16")[0] == first_missing
+
+
+@pytest.mark.parametrize("engine_range", ["<3.16,>=3.14.6", ">=3.14", ">=3.15.1,<3.17", "", None])
+def test_python_range_check_accepts_the_same_or_a_wider_engine(engine_range):
+    assert _python_versions_missing(engine_range, ">=3.15.1,<3.16") == []
+
+
+def test_python_range_check_refuses_a_project_range_it_cannot_cover():
+    with pytest.raises(AssertionError):
+        _python_versions_missing(">=3.14", ">=3.15.1")
+
+
+@pytest.mark.parametrize(
+    "changed",
+    ["pydantic [email]>=2.14,<3", "pydantic[email]>=2.14,<3", "pydantic @ https://example.invalid/p.whl", "orjson>=3"],
+)
+def test_requirement_comparison_notices_extras_urls_and_new_names(changed):
+    assert _requirements([changed]) != _requirements(["pydantic>=2.14,<3"])
+
+
+def test_requirement_comparison_ignores_order_spacing_and_name_spelling():
+    assert _requirements(["Pydantic [ Email ] >= 2.14 , < 3", "idna>=3"]) == _requirements(
+        ["idna>=3", "pydantic[email]<3,>=2.14"]
+    )

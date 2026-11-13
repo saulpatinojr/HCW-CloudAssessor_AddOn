@@ -17,8 +17,11 @@ so the run fails before a half-edited pull request can be opened. The workflow t
 (staged, so the bump pull request carries the deletion) and runs `uv lock`, which downloads the wheel and records its
 sha256. This script never touches the network and never edits uv.lock.
 
-Later bumps (--bump --from <old tag>) replace the one pinned line, built exactly from the old tag, with the line for the
-new tag; no pattern language is involved, so a tag cannot inject an edit or a command (the workflow also refuses any
+Later bumps (--bump --from <old tag>) replace two lines, each built exactly from the old tag, with the lines for the
+new tag: the pinned line, and the version line of the engine's static metadata in pyproject.toml,
+`version = "<version>"  # CORE_METADATA` (the `[[tool.uv.dependency-metadata]]` entry that keeps uv from asking the
+wheel's address; the same entry and marker as the Cloud Crawler add-on). Either both lines are replaced or nothing is
+written. No pattern language is involved, so a tag cannot inject an edit or a command (the workflow also refuses any
 tag that is not v<major>.<minor>.<patch> before it gets here).
 
 Usage: python scripts/adopt_core_wheel.py --tag v0.2.1 [--root <repository root>] [--wheel-url <url>]
@@ -74,12 +77,29 @@ def pinned_line(tag: str, url: str | None = None) -> str:
     return f'  "cloud-assessor-core @ {url or wheel_url(tag)}",  # CORE_REF {tag}'
 
 
+def metadata_line(tag: str) -> str:
+    """The version line of the engine's static metadata (`[[tool.uv.dependency-metadata]]`) for a release tag."""
+    match = TAG.fullmatch(tag)
+    if not match:
+        raise AdoptionError(f"tag {tag!r} is not v<major>.<minor>.<patch>")
+    return f'version = "{match.group(1)}"  # CORE_METADATA'
+
+
+def _replace_line(text: str, old: str, new: str, what: str) -> str:
+    lines = text.split("\n")
+    found = [i for i, line in enumerate(lines) if line == old]
+    if len(found) != 1:
+        raise AdoptionError(f"pyproject.toml: expected exactly one {what} line for the old tag, found {len(found)}")
+    lines[found[0]] = new
+    return "\n".join(lines)
+
+
 def bump_pyproject(text: str, old_tag: str, new_tag: str) -> str:
-    """Replace the pinned line for old_tag with the one for new_tag; both tags must be plain release tags."""
-    old, new = pinned_line(old_tag), pinned_line(new_tag)
-    if len(re.findall(rf"(?m)^{re.escape(old)}$", text)) != 1:
-        raise AdoptionError(f"pyproject.toml: expected exactly one pinned line for {old_tag}")
-    return text.replace(old + "\n", new + "\n", 1)
+    """Replace the pinned line and the CORE_METADATA line for old_tag with those for new_tag, both or neither."""
+    if old_tag == new_tag:
+        raise AdoptionError("the old and the new tag are the same")
+    text = _replace_line(text, pinned_line(old_tag), pinned_line(new_tag), "pinned CORE_REF")
+    return _replace_line(text, metadata_line(old_tag), metadata_line(new_tag), "CORE_METADATA")
 
 
 def bump(root: Path, old_tag: str, new_tag: str) -> list[Path]:
