@@ -3,6 +3,21 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-11-13, fifth part (the engine seed's switch code removed; HCW-HybridCloudWorks#1707)
+
+`core-update.yml`, `scripts/adopt_core_wheel.py` and `scripts/check-catalog.py` lose the code for the one-time switch from the local engine seed to the release wheel, which happened in [pull request 69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69) and could never run again; `ci.yml` reads `UV_VERSION` as a shell variable in its uv install steps ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). Run from `main` at `9290d7c`. Toolchain: Linux cloud session, CPython 3.15.2, uv 0.13.7 from a throwaway folder outside the repository.
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| `uv sync --all-packages`, `ruff check .`, `ruff format --check .` | yes | `Checked 51 packages`; `All checks passed!`; 58 files already formatted |
+| `python scripts/check-catalog.py` | yes | exit 0, catalog 1.1.0, 25 criteria |
+| `pytest -q --cov=src` | yes | 1088 passed, none skipped (the 10 seed-adoption tests that `main` skips are removed); coverage 96.01% |
+| actionlint, and zizmor `--offline` with `.github/zizmor.yml` | yes | actionlint exit 0. zizmor: no findings, 2 ignored (the two Playwright install lines `.github/zizmor.yml` names by line number) |
+| A real wheel-to-wheel bump replayed: the pin moved from `v0.3.0` to `v0.3.2`, the bump that [pull request 72](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/72) made on GitHub | yes | the bump job's bump and collect steps, run as written, produced only `pyproject.toml`, `uv.lock` and an empty `deleted.txt`; the pull-request job's apply step then exited 0 with outcome `success`, and the files it left were byte-identical to the real `v0.3.2` ones |
+| Review follow-ups: a new test that both jobs refuse a pin written `v0.3.2-seed`, then `ruff check .`, `ruff format --check .`, `check-catalog.py` and `pytest -q --cov=src` again | yes | all clean; 1089 passed, coverage 96.01%. With `(-seed)?` put back into the refs step's pin check, the new test failed (the step accepted `v0.3.2-seed -> v99.0.0`); with it put back into the apply step's check only, it failed too (the script still refused the pin, but not with the step's own `the pinned CORE_REF is malformed`); with both, it failed. On the real file it passed. The workflow file was restored and compared byte for byte with a copy taken first |
+| A real `core-update.yml` run on GitHub with the App token, and CI on GitHub | **no** | nothing was pushed; the next upstream release, or a probe run, is the first run of the changed workflow |
+| `make e2e` | **no** | this change touches neither the pane nor the API |
+
 ## Run 2026-11-13, fourth part (round two of the workflow runtime check; HCW-HybridCloudWorks#1707)
 
 `tests/security/test_workflow_runtime_setup.py` is replaced by round two of the check, from the canonical Python copy in HCW-NetworkEyes_App (commit `8ac3118`, with the fourth review round's fixes, [HCW-NetworkEyes_App#395](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/395)), which is kept the same as the website's `scripts/workflow-runtime-setup.test.mjs` (merged as `9e2e0dd`, [HCW-HybridCloudWorks#1719](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1719); issue [HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). Only this repository's own lists differ, and the wording of the docstring and comment lines that ran past this repository's 120 columns (the one long pattern, `ASSIGNMENT`, is written as two adjacent strings, which Python joins into the same value). Run from `main` at `ccfcd92`. Toolchain: Linux cloud session, CPython 3.15.2, uv 0.13.7 from a throwaway virtual environment outside the repository.
@@ -333,13 +348,19 @@ the image build runs it from `uv.lock` (see `infrastructure/README.md`), and CI 
   equal to `pyproject.toml` and `repository.manifest.json` by a test).
 - starlette 1.7 prefers `httpx2` for its test client; this edition pins `httpx` (the brief) and mutes that one
   deprecation notice in `pyproject.toml`.
-- `core-update.yml` is armed since 2026-10-31: the seed's dependency line carries `CORE_REF v0.1.0-seed`, and the
-  first run after that opens the adoption pull request for the newest release (the wheel by URL, its sha256 in
-  `uv.lock`; ADR-0001). Until that pull request merges, the engine is still the seed.
-- When it is not inert, `core-update.yml` opens the pull request with a GitHub App token (the HCW Main Admin App: its client ID is the repository variable
+- The engine is the App's release wheel, not a local seed. `core-update.yml` made the one-time switch in
+  [pull request 69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69) (merged 2026-10-31 as `8b4d30d`,
+  engine `v0.3.0`: the wheel by URL, its sha256 in `uv.lock`; ADR-0001), which deleted the seed under
+  `packages/cloud-assessor-core`, and then its first wheel-to-wheel bump in
+  [pull request 72](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/72) (merged 2026-11-05 as `99c9a24`,
+  `v0.3.0` to `v0.3.2`). The pin now reads `CORE_REF v0.3.2`. The code for the one-time switch was removed on
+  2026-11-13, so the workflow now accepts only a plain `v<major>.<minor>.<patch>` pin and fails a run whose
+  `pyproject.toml` has no `CORE_REF` line.
+- `core-update.yml` opens the pull request with a GitHub App token (the HCW Main Admin App: its client ID is the repository variable
   `HCW_MAIN_ADMIN_CLIENT_ID`, its private key the repository secret `HCW_MAIN_ADMIN_PRIVATE_KEY`), not `GITHUB_TOKEN`, so the required checks run on the pull request itself. That path is covered by
-  `tests/security/test_core_update_app_token.py` (static) and was linted with actionlint and zizmor; it has not yet opened
-  a real bump pull request here. To prove the credential while the workflow is inert:
+  `tests/security/test_core_update_app_token.py` (static) and was linted with actionlint and zizmor, and it has worked on
+  GitHub: the App (`hcw-main-admin[bot]`) opened both pull request 69 and pull request 72. To prove the credential again
+  without opening a pull request (a manual run that only makes read-only calls):
   `gh workflow run core-update.yml -R saulpatinojr/HCW-CloudAssessor_AddOn --ref main -f probe=true`.
   The App key lives only as the repository secret `HCW_MAIN_ADMIN_PRIVATE_KEY` and is never printed. To rotate it,
   generate a new private key on the settings page of the App (https://github.com/settings/apps), replace the secret in every repository that holds the key (this one:

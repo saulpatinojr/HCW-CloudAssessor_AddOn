@@ -146,7 +146,7 @@ def test_the_job_that_holds_the_key_runs_no_engine_code_and_only_mains_bump_scri
     pr = JOB_TEXT["pull-request"]
     assert re.search(r"(?m)^ {4}needs:\s*bump\s*$", pr)
     scripts = _commands(pr)
-    assert "git rm" in scripts and "gh pr merge" in scripts, "the run blocks were not found"
+    assert "adopt_core_wheel.py --bump" in scripts and "gh pr merge" in scripts, "the run blocks were not found"
     # uv only to lock, never to build, sync or run; python only for main's bump script and the hashed uv install.
     assert set(re.findall(r"\buv\s+(\S+)", scripts)) == {"lock"}
     for line in scripts.splitlines():
