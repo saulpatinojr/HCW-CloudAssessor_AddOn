@@ -3,6 +3,22 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-11-13, third part (the finished workflow runtime check; HCW-HybridCloudWorks#1707)
+
+`tests/security/test_workflow_runtime_setup.py` is replaced by the finished Python copy from HCW-NetworkEyes_App (commit `3810402`, [HCW-NetworkEyes_App#394](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/394)), which is kept the same as the website's `scripts/workflow-runtime-setup.test.mjs` ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). Only this repository's own lists differ, and the wording of three comment lines that ran past this repository's 120 columns. Toolchain: Linux cloud session, CPython 3.15.2, uv 0.13.7 installed with `pip` into a throwaway virtual environment outside the repository.
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| The port's code against HCW-NetworkEyes_App's copy at `3810402` | yes | the two files' syntax trees are identical once the docstrings and the four lists (`RUNNER_DEFAULT_ALLOWED`, `INDIRECT_RUNTIME`, `PIPX_ALLOWED`, `BELOW_FLOOR_ALLOWED`) are set aside |
+| `ruff check .`, `ruff format --check .`, `python scripts/check-catalog.py` | yes | clean, 58 files; catalog 1.1.0, 25 criteria |
+| `pytest -q --cov=src` | yes | 740 passed, 10 skipped (the seed-adoption tests, as on `main`); coverage 96.01%. `tests/security/test_workflow_runtime_setup.py` alone: 354 passed (121 before) |
+| The check over this repository's workflows | yes | no step reported: every step that runs Python or Node.js (now counting `pytest`, `bash -c` scripts and the rest) comes after a set-up step that covers it, every set-up step asks for 3.15 or 26, and no workflow runs `pipx` |
+| The scripts the workflows call, read one level deep | yes | every Python script a step calls (`scripts/follow_website_base.py`, `check-catalog.py`, `adopt_core_wheel.py`) is run with `python` or `python3`, which the check reads, and starts no other program that is a runtime; `scripts/package-repository.sh` (the `package` job, which sets nothing up) runs only `zip` and `unzip`. So `INDIRECT_RUNTIME` stays empty |
+| The same answers as HCW-NetworkEyes_App's copy | yes | 21,840 shared cases (command reading with its shell text, the `pipx` check and the condition rules) and the 97 workflow files of the nine HCW repositories cloned here (unset steps, `pipx` problems, floor problems): no disagreement, and none between the three add-ons' copies |
+| The new checks catch a real step | yes | a job with `bash -c 'pytest -q'` and `pipx run zizmor .` steps added to the end of `ci.yml` on the working tree: 2 failed, naming both steps; the file was then restored |
+| actionlint, zizmor, and CI on GitHub | **no** | no workflow changed, and nothing was pushed; the pull request's CI runs the test on GitHub |
+| `make e2e` | **no** | this change touches neither the pane nor the API |
+
 ## Run 2026-11-13, second part (the engine's static metadata; HCW-HybridCloudWorks#1707)
 
 The first part of this run (below) found that uv 0.13.7 could not lock this repository from here: its first request for the engine wheel is a HEAD, which GitHub's signed download link answered with `401`. This part ports the Cloud Crawler add-on's fix ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)): `pyproject.toml` gives uv the engine's metadata in a `[[tool.uv.dependency-metadata]]` entry, whose version line carries the marker `CORE_METADATA` and moves with the pin. `scripts/adopt_core_wheel.py --bump`, which `core-update.yml` runs in both jobs, now moves both lines or neither. The pull-request job needs no new check: it regenerates the bump with that script and compares the bump job's files with its own byte for byte. Toolchain as in the first part, with uv 0.13.7 for every uv command below.
