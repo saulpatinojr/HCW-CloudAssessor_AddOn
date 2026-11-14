@@ -128,27 +128,31 @@ both fictional samples are identical between the seed and `0.2.1` (compared on 2
   reads `coproc`, reads a step's `shell:` as the runner passes it on (no shell fills in `$PATH` there), treats a
   `shell:` holding a GitHub expression it cannot read as able to run either runtime, and holds Python to 3.15.2, the
   newest 3.15 release. Its canonical copy is the Python one in HCW-NetworkEyes_App
-  ([HCW-NetworkEyes_App#403](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/403), open when this was written); the website's JavaScript twin merged
+  ([HCW-NetworkEyes_App#403](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/403), merged on 2026-11-14); the website's JavaScript twin merged
   in [HCW-HybridCloudWorks#1725](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1725). This repository's `tests/security/test_workflow_runtime_setup.py` is refreshed from the
   canonical copy in the same pull request as this entry; only its own lists stay its own.
 - **Reaches this edition? Only as this test.** No engine, catalog, rule, wheel or release change comes with it, so
-  `core-update.yml` has nothing to adopt. The App (HCW-CloudAssessor_App) keeps its own copy (`tests/unit/test_workflow_runtime_setup.py`); it is not yet at round four and needs the same change in its own pull request, which was not open when this was written.
+  `core-update.yml` has nothing to adopt. The App (HCW-CloudAssessor_App) keeps its own copy (`tests/unit/test_workflow_runtime_setup.py`); it moved to round four in
+  [HCW-CloudAssessor_App#106](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/106), merged on 2026-11-14
+  together with the Python 3.15.2 change in the entry below.
 - What the test now reads is in this repository's `CHANGELOG.md` entry of the same date.
 
 ### 2026-11-14: the App and this edition both require Python 3.15.2 (owner decision 2026-11-14)
 
 - The owner decided on 2026-11-14 that every Hybrid Cloud Works Python repository requires the latest stable release
-  of Python 3.15, which is 3.15.2 (released 2026-10-25). Upstream (`HCW-CloudAssessor_App`), on its branch
-  `claude/python-3.15.2` (its pull request was not open when this was written), moves `requires-python` from
+  of Python 3.15, which is 3.15.2 (released 2026-10-25). Upstream (`HCW-CloudAssessor_App`),
+  [HCW-CloudAssessor_App#106](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/106) (merged on 2026-11-14,
+  merge commit `28e833a`, together with round four of the runtime check in the entry above) moved `requires-python` from
   `>=3.15.0,<3.16` to `>=3.15.2,<3.16` in both of its packages, including the engine `cloud-assessor-core`, and
-  re-locks `uv.lock` with uv 0.13.8 (no package version moved; its `requirements*.lock.txt` exports are unchanged).
+  re-locked `uv.lock` with uv 0.13.8 (no package version moved; its `requirements*.lock.txt` exports are unchanged).
   This repository makes the same move in its own pull request: `requires-python` `>=3.15.2,<3.16`, re-locked.
 - **Reaches this edition? Yes, at the App's next release, and nothing more has to change here.** The wheel after
   `v0.3.2` will declare `Requires-Python: <3.16,>=3.15.2`, so it will not install on 3.15.0 or 3.15.1. This
   repository then requires the same range and builds on Python 3.15.2 (`infrastructure/docker/versions.env`), so
   `core-update.yml` adopts it as usual and `tests/security/test_engine_static_metadata.py` (the wheel accepts every
   Python the project allows) stays green. The `v0.3.2` pin (`Requires-Python: <3.16,>=3.14.6`) is unaffected.
-- Not checked: the App's next release, which is not tagged yet.
+- Not checked: the App's next release, which is not tagged yet (the newest App release was still `v0.3.2` when this was
+  re-read on 2026-11-14, after the merge).
 
 ### 2026-11-14: the workflow runtime check moves to round three here and in the App (website [#1722](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1722), NetworkEyes_App [#399](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/399))
 
