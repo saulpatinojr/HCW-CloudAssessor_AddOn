@@ -3,6 +3,21 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-11-14, second part (round four of the workflow runtime check; HCW-HybridCloudWorks#1707)
+
+`tests/security/test_workflow_runtime_setup.py` takes round four of the check from the canonical Python copy in HCW-NetworkEyes_App (`0b28c39` on its branch `claude/runtime-round4-1707`, [HCW-NetworkEyes_App#403](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/403)), which is kept the same as the website's copy (merged as `95b2aac5`, [HCW-HybridCloudWorks#1725](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1725); issue [HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). Only this repository's own lists differ, and the wrapping of the lines that ran past this repository's 120 columns: the new made-up workflows are written as adjacent strings, which Python joins into the same value, and one docstring line is wrapped one word earlier. Run from `main` at `28850d5`. Toolchain: Linux cloud session, CPython 3.15.2, uv 0.13.8.
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| The port's code against HCW-NetworkEyes_App's copy at `0b28c39` | yes | identical syntax trees once the docstrings and the four lists (`RUNNER_DEFAULT_ALLOWED`, `INDIRECT_RUNTIME`, `PIPX_ALLOWED`, `BELOW_FLOOR_ALLOWED`) are set aside, as on `main` against the canonical copy before round four; the same 109 test functions in the same order; the module docstring has the same words, except the paragraph saying this file is a copy |
+| `uv sync --all-packages`, `ruff check .`, `ruff format --check .`, `python scripts/check-catalog.py` | yes | `Checked 51 packages`; `All checks passed!`; 58 files already formatted; catalog 1.1.0, 25 criteria |
+| `pytest -q --cov=src` | yes | 1520 passed; coverage 96.01%. `tests/security/test_workflow_runtime_setup.py` alone: 1129 passed (1049 before) |
+| The same answers as the canonical copy | yes | the 60,632 generated cases of round four and its review rounds (command reading, `sudo` reading, `pipx`, the floor, `shell:` words, and made-up workflows read for unset steps, `pipx` problems and floor problems): 0 disagreements with HCW-NetworkEyes_App's copy at `0b28c39`, and none between the three add-ons' copies |
+| The check over the workflows of every HCW clone in this session (23 folders, these round-four copies included) | yes | the same findings as the canonical copy's, folder by folder, and the same as the canonical copy before round four; here, no step reported, no `pipx` problem, no set-up step below the floor |
+| gitleaks (the secret scan `security.yml` runs) | **no** | not installed here; `tests/security/test_no_secrets.py` ran in the suite above |
+| actionlint, zizmor, and CI on GitHub | **no** | no workflow changed; CI runs when the pull request is opened |
+| `make e2e` | **no** | this change touches neither the pane nor the API |
+
 ## Run 2026-11-14 (round three of the workflow runtime check; HCW-HybridCloudWorks#1707)
 
 `tests/security/test_workflow_runtime_setup.py` is replaced by round three of the check, from the canonical Python copy in HCW-NetworkEyes_App (merged as `9b96396`, [HCW-NetworkEyes_App#399](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/399)), which is kept the same as the website's `scripts/workflow-runtime-setup.test.mjs` (merged as `4be949f`, [HCW-HybridCloudWorks#1722](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1722); issue [HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). Only this repository's own lists differ, and the wrapping of the docstring and comment lines that ran past this repository's 120 columns; the 17 one-line YAML texts the new tests feed the reader, which ran past 120 columns too, are written as adjacent strings, which Python joins into the same value. Run from `main` at `7e4750b`. Toolchain: Linux cloud session, CPython 3.15.2, the session's uv 0.11.32.
