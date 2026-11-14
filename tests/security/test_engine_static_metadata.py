@@ -232,7 +232,7 @@ def test_python_range_check_notices_a_narrower_engine(engine_range, first_missin
     assert _python_versions_missing(engine_range, ">=3.15.2,<3.16")[0] == first_missing
 
 
-@pytest.mark.parametrize("engine_range", ["<3.16,>=3.14.6", ">=3.14", ">=3.15.1,<3.17", "", None])
+@pytest.mark.parametrize("engine_range", ["<3.16,>=3.14.6", "<3.16,>=3.15.2", ">=3.14", ">=3.15.1,<3.17", "", None])
 def test_python_range_check_accepts_the_same_or_a_wider_engine(engine_range):
     assert _python_versions_missing(engine_range, ">=3.15.2,<3.16") == []
 
