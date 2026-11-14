@@ -5,7 +5,7 @@
 this file before you change behaviour here, so you know what upstream already did and what is still waiting to be adopted,
 and add an entry (newest first) whenever you adopt an upstream change or find that one reaches this repository.
 
-Last entry added: 2026-11-13 (the newest entry below). The "Current upstream state" table was last re-read on
+Last entry added: 2026-11-14 (the newest entry below). The "Current upstream state" table was last re-read on
 2026-11-04, from a clone of the App's `main` at `e1fc194` and this repository's `main` at `8aff24e`; the rows that
 changed since 2026-10-31 were re-read on that date; the section "Adopting `v0.2.1`" below
 describes the mechanism as it was before the first adoption and is kept as history. Where something was not checked,
@@ -121,6 +121,21 @@ above and this section should then name the bump pull request and its merge comm
 both fictional samples are identical between the seed and `0.2.1` (compared on 2026-10-31, `VALIDATION.md`).
 
 ## Entries, newest first
+
+### 2026-11-14: the App and this edition both require Python 3.15.2 (owner decision 2026-11-14)
+
+- The owner decided on 2026-11-14 that every Hybrid Cloud Works Python repository requires the latest stable release
+  of Python 3.15, which is 3.15.2 (released 2026-10-25). Upstream (`HCW-CloudAssessor_App`), on its branch
+  `claude/python-3.15.2` (its pull request was not open when this was written), moves `requires-python` from
+  `>=3.15.0,<3.16` to `>=3.15.2,<3.16` in both of its packages, including the engine `cloud-assessor-core`, and
+  re-locks `uv.lock` with uv 0.13.8 (no package version moved; its `requirements*.lock.txt` exports are unchanged).
+  This repository makes the same move in its own pull request: `requires-python` `>=3.15.2,<3.16`, re-locked.
+- **Reaches this edition? Yes, at the App's next release, and nothing more has to change here.** The wheel after
+  `v0.3.2` will declare `Requires-Python: <3.16,>=3.15.2`, so it will not install on 3.15.0 or 3.15.1. This
+  repository then requires the same range and builds on Python 3.15.2 (`infrastructure/docker/versions.env`), so
+  `core-update.yml` adopts it as usual and `tests/security/test_engine_static_metadata.py` (the wheel accepts every
+  Python the project allows) stays green. The `v0.3.2` pin (`Requires-Python: <3.16,>=3.14.6`) is unaffected.
+- Not checked: the App's next release, which is not tagged yet.
 
 ### 2026-11-14: the workflow runtime check moves to round three here and in the App (website [#1722](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1722), NetworkEyes_App [#399](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/399))
 

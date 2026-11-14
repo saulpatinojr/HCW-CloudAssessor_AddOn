@@ -1,16 +1,23 @@
-Hybrid Cloud Works Cloud Assessment (lab edition) and the cloud-assessor-core engine seed
+Hybrid Cloud Works Cloud Assessment (lab edition)
 Copyright (c) 2026 Hybrid Cloud Works. Licensed under MIT (see LICENSE).
 
-[REVIEW REQUIRED] License: the upstream product (HCW-CloudAssessor_App, R-003) has not decided its license. This edition
-needs one now and uses MIT to match the sibling AddOn; the owner confirms or replaces it before publication.
+License: MIT, decided by the owner and recorded as R-003 in HCW-CloudAssessor_App's REVIEW.md on 2026-10-25. The
+upstream product, HCW-CloudAssessor_App, uses the same license, and both repositories are public.
 
-[REVIEW REQUIRED] Attribution (R-005): the criteria in the cloud-assessor-core engine's catalog (criteria.json, released by HCW-CloudAssessor_App) are paraphrased
-from the FinOps Foundation Framework (https://www.finops.org/framework/) and the Microsoft Azure Well-Architected
-Framework and Azure product documentation (https://learn.microsoft.com/), each with a reference link and a retrieval
-date. No framework text is reproduced; `text` is the single replaceable field per criterion. This project is not
-affiliated with or endorsed by the FinOps Foundation or Microsoft. FinOps is a trademark of the FinOps Foundation;
-Microsoft, Azure and Entra are trademarks of Microsoft Corporation. Every reference link is marked [VERIFY] in the
-catalog (`verify: true`) until the owner confirms it.
+Engine: cloud-assessor-core. It was seeded in this repository
+(docs/adr/ADR-0001-lab-edition-upload-only-and-python-engine-seed.md) and is now written in
+saulpatinojr/HCW-CloudAssessor_App. This edition installs that repository's release wheel as a dependency, pinned by URL
+in pyproject.toml and by sha256 in uv.lock. The engine is MIT-licensed, the same as this repository; no engine source is
+kept here.
+  Source: https://github.com/saulpatinojr/HCW-CloudAssessor_App (packages/cloud-assessor-core).
+
+[REVIEW REQUIRED] Attribution (R-005): the criteria in the cloud-assessor-core engine's catalog (criteria.json, released
+by HCW-CloudAssessor_App) are paraphrased from the FinOps Foundation Framework (https://www.finops.org/framework/) and
+the Microsoft Azure Well-Architected Framework and Azure product documentation (https://learn.microsoft.com/), each with
+a reference link and a retrieval date. No framework text is reproduced; `text` is the single replaceable field per
+criterion. This project is not affiliated with or endorsed by the FinOps Foundation or Microsoft. FinOps is a trademark
+of the FinOps Foundation; Microsoft, Azure and Entra are trademarks of Microsoft Corporation. Every reference link is
+marked [VERIFY] in the catalog (`verify: true`) until the owner confirms it.
 
 The pane's theme tokens (web/theme.css) are copied from the hybridcloudworks.com website repository
 (HCW-HybridCloudWorks, frontend/src/index.css) on 2026-10-10. Generated reports are illustrative and are not an audit.

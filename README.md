@@ -71,10 +71,10 @@ Terraform state.
 
 ## Quick start
 
-Requires Python 3.15.2 or newer and [`uv`](https://docs.astral.sh/uv/) 0.13.7 or newer.
+Requires Python 3.15.2 or a later 3.15 release and [`uv`](https://docs.astral.sh/uv/) 0.13.7 or newer.
 
 ```bash
-uv python pin 3.15 && uv sync --all-packages
+uv python pin --no-project 3.15 && uv sync --all-packages
 uv run pytest -q --cov=src                          # unit, contract, security, manifest; coverage gate 85
 CA_ALLOW_NO_TURNSTILE=1 PORT=8080 uv run python -m cloud_assessment_lab   # http://127.0.0.1:8080
 curl -s http://127.0.0.1:8080/api/health
@@ -84,7 +84,7 @@ curl -s -X POST http://127.0.0.1:8080/api/assessments -H 'content-type: applicat
 PowerShell:
 
 ```powershell
-uv python pin 3.15; uv sync --all-packages
+uv python pin --no-project 3.15; uv sync --all-packages
 uv run pytest -q --cov=src
 $env:CA_ALLOW_NO_TURNSTILE = "1"; $env:PORT = "8080"; uv run python -m cloud_assessment_lab
 Invoke-RestMethod http://127.0.0.1:8080/api/health
