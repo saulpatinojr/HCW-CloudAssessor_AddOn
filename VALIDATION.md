@@ -3,6 +3,26 @@
 What was executed for this edition and what was not, per run. "Here" is the authoring container (no Docker daemon, PyPI
 and the Playwright CDN reachable through a proxy). Dates are the run date.
 
+## Run 2026-11-13, sixth part (uv 0.13.8; HCW-HybridCloudWorks#1707)
+
+uv (the tool that installs the Python packages and keeps `uv.lock`) moves from 0.13.7 to 0.13.8 in `ci.yml`, `security.yml`, `core-update.yml` and the Dockerfile's uv image ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). 0.13.8 is a patch release with no change to the lock format ([release notes](https://github.com/astral-sh/uv/blob/0.13.8/CHANGELOG.md)). Run from `main` at `e41a06d`. Toolchain: Linux cloud session, CPython 3.15.2, uv 0.13.8 installed with `pip` into a throwaway virtual environment outside the repository, and uv 0.13.7 from another for the comparisons.
+
+| Check | Executed here | Result |
+| --- | --- | --- |
+| The uv image digest: an anonymous `HEAD` of `https://ghcr.io/v2/astral-sh/uv/manifests/0.13.8` asking for an image index | yes | `Docker-Content-Digest: sha256:5cc1805e2426484abca4ad46ea783bab281fdb225fd82d8ce6d66a81254bac85`, content type `application/vnd.oci.image.index.v1+json` (the multi-platform index, which is what `docker buildx imagetools inspect` prints in `ci.yml`) |
+| `ci.yml`'s uv check replayed (the `grep -Fq` lines, with the digest above in place of `docker buildx`) | yes | the Dockerfile line and the `"uv==0.13.8"` lines in `security.yml` and `core-update.yml` all match |
+| The uv wheel hash in `core-update.yml`'s pull-request job | yes | `pip download --no-deps --only-binary=:all: --platform manylinux_2_17_x86_64 uv==0.13.8` gives `uv-0.13.8-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl` with sha256 `e18a57b8b352eb7c8feb317b9f6f533c8f0ad9673fd6cf34bbe3cf1a9f6a8984` |
+| `uv lock --check` with uv 0.13.8, with the session's cache and again with an empty cache | yes | exit 0 both times. The `401` on the engine wheel's address recorded in the 0.13.7 run did not come back: the `[[tool.uv.dependency-metadata]]` entry means uv has nothing to ask that address |
+| `uv lock` with uv 0.13.8 on a scratch copy | yes | `Resolved 52 packages`; `uv.lock` byte-identical to the committed one |
+| The image's `uv export` (the Dockerfile's flags) and `security.yml`'s export, under uv 0.13.7 and 0.13.8 | yes | byte-identical in both cases (98 and 95 lines) |
+| `uv sync --all-packages`, `ruff check .`, `ruff format --check .` | yes | `Checked 51 packages`; `All checks passed!`; 58 files already formatted |
+| `python scripts/check-catalog.py` | yes | exit 0, catalog 1.1.0, 25 criteria |
+| `pytest -q --cov=src` | yes | 1089 passed, none skipped; coverage 96.01% (includes `tests/security/test_core_update_app_token.py`, which checks that the hashed uv in the pull-request job is the same version as the bump job's) |
+| actionlint 1.7.12 and zizmor 1.31.1 `--offline` on the three changed workflows, hadolint 2.14.0 on the Dockerfile (the hadolint binary checked against the sha256 in `ci.yml`) | yes, actionlint without shellcheck | no findings from any of them (zizmor: 2 ignored, the lines `.github/zizmor.yml` names). shellcheck is not installed here; the shell lines changed only in a version number and a hash |
+| The upstream engine wheel built with uv 0.13.7 and 0.13.8 (in the App, from its `main` at `bbf4e2e`, two scratch copies) | yes | wheel and source archive byte-identical under both versions (wheel sha256 `2e763e7a…12be`); recorded in the App's `CHANGELOG.md` too |
+| Docker image build, and CI itself on uv 0.13.8 | **no** | no Docker daemon here; the pull request's CI run is the first real test |
+| `make e2e` | **no** | this change touches neither the pane nor the API |
+
 ## Run 2026-11-13, fifth part (the engine seed's switch code removed; HCW-HybridCloudWorks#1707)
 
 `core-update.yml`, `scripts/adopt_core_wheel.py` and `scripts/check-catalog.py` lose the code for the one-time switch from the local engine seed to the release wheel, which happened in [pull request 69](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/69) and could never run again; `ci.yml` reads `UV_VERSION` as a shell variable in its uv install steps ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). Run from `main` at `9290d7c`. Toolchain: Linux cloud session, CPython 3.15.2, uv 0.13.7 from a throwaway folder outside the repository.

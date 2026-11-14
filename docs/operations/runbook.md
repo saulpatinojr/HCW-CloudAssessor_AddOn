@@ -238,7 +238,7 @@ packages) has to re-resolve `uv.lock` (the file that records the exact version a
 the engine's metadata: its name, version and what it depends on. That happens on `uv lock`, on CI's `uv lock --check`,
 in the engine-update workflow, and in Dependabot's uv job, once for every package Dependabot tries to update.
 
-**What goes wrong without the fix.** uv 0.13 and later (CI uses 0.13.7) ask the wheel's address with a HEAD first (a
+**What goes wrong without the fix.** uv 0.13 and later (CI uses 0.13.8) ask the wheel's address with a HEAD first (a
 request for the file's headers, not the file). GitHub answers with a redirect to a short-lived signed download link on
 `objects.githubusercontent.com`, and from a cloud session on 2026-11-13 that link answered the HEAD with `401` (HTTP's
 "not authorised"), so `uv lock` and `uv lock --check` failed. A normal download (a GET) of the same address worked. uv
@@ -293,12 +293,12 @@ compatibility check in the workflow run goes red and the pull request carries th
    Leave `requires-python` out of the entry: Dependabot copies the first `requires-python` in `uv.lock` over every other
    one, so a different range there would break the lock of its pull requests. The test
    `test_wheel_accepts_every_python_the_project_allows` checks the engine's `Requires-Python` instead.
-5. Rebuild the lock with the uv version `ci.yml` names in `UV_VERSION` (0.13.7 today; use the number that file
+5. Rebuild the lock with the uv version `ci.yml` names in `UV_VERSION` (0.13.8 today; use the number that file
    shows), commit `pyproject.toml` and `uv.lock`, and push. Success: it prints `Resolved` and a package count, and the
    pull request's checks go green. Do this soon after the pull request opens and merge it once green: while it is open,
    the scheduled engine-update run (every six hours) rebuilds the same branch from `main`, which is expected to replace
    a hand-made change (read from the pull-request action's documentation, not tested here).
 
    ```powershell
-   uvx uv@0.13.7 lock
+   uvx uv@0.13.8 lock
    ```

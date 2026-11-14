@@ -5,8 +5,9 @@
 this file before you change behaviour here, so you know what upstream already did and what is still waiting to be adopted,
 and add an entry (newest first) whenever you adopt an upstream change or find that one reaches this repository.
 
-Last updated: 2026-11-04, from a clone of the App's `main` at `e1fc194` and this repository's `main` at `8aff24e`. The
-rows of the table that changed since 2026-10-31 were re-read on that date; the section "Adopting `v0.2.1`" below
+Last entry added: 2026-11-13 (the newest entry below). The "Current upstream state" table was last re-read on
+2026-11-04, from a clone of the App's `main` at `e1fc194` and this repository's `main` at `8aff24e`; the rows that
+changed since 2026-10-31 were re-read on that date; the section "Adopting `v0.2.1`" below
 describes the mechanism as it was before the first adoption and is kept as history. Where something was not checked,
 it says so.
 
@@ -120,6 +121,17 @@ above and this section should then name the bump pull request and its merge comm
 both fictional samples are identical between the seed and `0.2.1` (compared on 2026-10-31, `VALIDATION.md`).
 
 ## Entries, newest first
+
+### 2026-11-13: the App's workflows, including the one that builds the engine wheel, move to uv 0.13.8 (website [#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707))
+
+- Upstream (`HCW-CloudAssessor_App`, [pull request 103](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/103)) moves uv from 0.13.7 to 0.13.8 in
+  `ci.yml`, `dependabot-lockfiles.yml`, `security.yml` and `publish-core.yml`. `publish-core.yml` is the workflow that
+  builds the engine wheel this repository installs. 0.13.8 is a patch release of uv with no change to the lock format.
+- **Reaches this edition? Only through the next engine wheel, and it makes no difference to it.** The wheel and the
+  source archive built from the App's `main` (`bbf4e2e`) with uv 0.13.7 and with uv 0.13.8 were byte for byte the same
+  (checked 2026-11-13 in two scratch copies). The `v0.3.2` pin here is untouched. This repository moves to 0.13.8 in the
+  same set of changes, in the pull request that adds this entry.
+- Not checked: a real release built on GitHub with 0.13.8.
 
 ### 2026-11-13: the workflow runtime check moves to round two here and in the App (website [#1719](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1719), NetworkEyes_App [#395](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/395))
 
