@@ -9,7 +9,7 @@ dependencies = [
   # The engine: the upstream release wheel, by URL (uv.lock holds its sha256). core-update.yml moves this line
   # to each newer release and re-locks; do not edit it by hand.
   "cloud-assessor-core @ https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.2/cloud_assessor_core-0.3.2-py3-none-any.whl",  # CORE_REF v0.3.2
-  "fastapi==0.162.0",
+  "fastapi==0.162.2",
   "uvicorn==0.54.0",
   "pydantic==2.14.1",
 ]
