@@ -122,6 +122,20 @@ both fictional samples are identical between the seed and `0.2.1` (compared on 2
 
 ## Entries, newest first
 
+### 2026-11-24: App releases gain a provenance file (CloudAssessor_App [#115](https://github.com/saulpatinojr/HCW-CloudAssessor_App/pull/115), merged 2026-11-24)
+
+- From the first App release after `v0.3.2`, the release page carries a third file beside the wheel and the sdist:
+  `cloud_assessor_core-<version>.intoto.jsonl`. It is the engine's build provenance (a signed record of which workflow,
+  tag and commit built both files), the same proof GitHub already kept in its attestation store, now also attached as a
+  file. It is keyless (no stored key).
+- **Reaches this repository: no.** `core-update.yml` builds the wheel's address from the tag name and never lists a
+  release's files; `uv.lock` pins the wheel's sha256. The wheel's name, address and contents are unchanged, and the
+  releases up to `v0.3.2` are untouched.
+- **What to run:** nothing. Optional check of an adopted wheel, with the two files downloaded into one folder:
+  `gh attestation verify cloud_assessor_core-<version>-py3-none-any.whl --repo saulpatinojr/HCW-CloudAssessor_App --bundle cloud_assessor_core-<version>.intoto.jsonl`.
+  Exit code 0 means the wheel is the one that workflow built. Not run yet: no release carries the file until the next
+  App release.
+
 ### 2026-11-14: the workflow runtime check moves to round five, the last planned round (website [#1726](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1726), NetworkEyes_App [#405](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/405))
 
 - The check that every workflow step running Python or Node.js sets its version up first has a fifth round: a step whose
